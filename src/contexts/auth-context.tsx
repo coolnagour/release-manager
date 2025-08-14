@@ -21,6 +21,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Suspense } from "react";
 import { UserProfile } from "@/types/user-profile";
 import { findOrCreateUser } from "@/actions/app-actions";
+import { Role } from "@/types/roles";
 
 const USE_MOCK_AUTH = process.env.NEXT_PUBLIC_USE_MOCK_AUTH === "true";
 
@@ -66,7 +67,7 @@ const mockUserProfile: UserProfile = {
   email: "mock.user@example.com",
   displayName: "Mock User",
   photoURL: "https://placehold.co/100x100.png",
-  role: "superadmin",
+  role: Role.SUPERADMIN,
   createdAt: new Date(),
 }
 

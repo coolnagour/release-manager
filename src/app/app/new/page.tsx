@@ -13,19 +13,20 @@ import {
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { Role } from "@/types/roles";
 
 function CreateAppPage() {
   const { userProfile, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && userProfile?.role !== 'superadmin') {
+    if (!loading && userProfile?.role !== Role.SUPERADMIN) {
       router.replace('/');
     }
   }, [userProfile, loading, router]);
 
 
-  if (loading || userProfile?.role !== 'superadmin') {
+  if (loading || userProfile?.role !== Role.SUPERADMIN) {
     return (
        <div className="flex flex-col min-h-screen">
         <Header />

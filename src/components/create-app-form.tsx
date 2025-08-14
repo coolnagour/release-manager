@@ -23,6 +23,7 @@ import { useToast } from "@/hooks/use-toast";
 import { createApp, updateApp } from "@/actions/app-actions";
 import { useState, useTransition } from "react";
 import { Application } from "@/types/application";
+import { Role } from "@/types/roles";
 
 const formSchema = z.object({
   appName: z.string().min(2, {
@@ -52,8 +53,8 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
   const [isPending, startTransition] = useTransition();
 
   const isEditMode = !!application;
-  const canEditAll = userProfile?.role === 'superadmin';
-  const canEditUsers = userProfile?.role === 'admin' || userProfile?.role === 'superadmin';
+  const canEditAll = userProfile?.role === Role.SUPERADMIN;
+  const canEditUsers = userProfile?.role === Role.ADMIN || userProfile?.role === Role.SUPERADMIN;
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),

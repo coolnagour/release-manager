@@ -16,6 +16,7 @@ import {
 import { PlusCircle, Rocket, LogOut, Settings, Moon, Sun } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Role } from "@/types/roles";
 
 export function Header() {
   const { setTheme } = useTheme();
@@ -36,7 +37,7 @@ export function Header() {
           <div className="flex items-center gap-4">
             {loading ? (
               <Skeleton className="h-10 w-36 rounded-md" />
-            ) : user && userProfile?.role === 'superadmin' ? (
+            ) : user && userProfile?.role === Role.SUPERADMIN ? (
               <Button asChild style={{ backgroundColor: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))" }}>
                 <Link href="/app/new">
                   <PlusCircle className="mr-2 h-4 w-4" />

@@ -6,6 +6,7 @@ import { getFirestore, Timestamp } from "firebase-admin/firestore";
 import { DataService } from ".";
 import { Application } from "@/types/application";
 import { UserProfile } from "@/types/user-profile";
+import { Role } from "@/types/roles";
 
 const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
 
@@ -110,12 +111,12 @@ export class FirestoreDataService implements DataService {
     const usersSnapshot = await usersCollection.limit(1).get();
     const isFirstUser = usersSnapshot.empty;
 
-    const newUser: UserProfile = {
+    const newUser: Omit<UserProfile, "createdAt"> & { createdAt: Date} = {
       uid: userData.uid,
       email: userData.email,
       displayName: userData.displayName,
       photoURL: userData.photoURL,
-      role: isFirstUser ? "superadmin" : "user",
+      role: isFirstUser ? Role.SUPERADMIN : Role.USER,
       createdAt: new Date(),
     };
 
@@ -123,6 +124,9 @@ export class FirestoreDataService implements DataService {
       ...newUser,
       createdAt: Timestamp.fromDate(newUser.createdAt),
     });
-    return newUser;
+    
+    // We can't just return newUser because the role might be a plain string from Firestore
+    const createdDoc = await userRef.get();
+    return this.toUserProfile(createdDoc);
   }
 }
