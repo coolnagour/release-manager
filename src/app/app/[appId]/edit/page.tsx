@@ -55,7 +55,7 @@ function EditAppPage() {
         <div className="p-4 sm:p-6 lg:p-8">
             <Skeleton className="h-8 w-48 mb-2" />
             <Skeleton className="h-4 w-64 mb-6" />
-            <Card className="w-full max-w-2xl shadow-lg">
+            <Card className="w-full shadow-lg">
                 <CardHeader>
                   <Skeleton className="h-7 w-1/2" />
                   <Skeleton className="h-4 w-3/4" />
@@ -94,7 +94,7 @@ function EditAppPage() {
              <h1 className="text-3xl font-bold tracking-tight font-headline">Application Settings</h1>
              <p className="text-muted-foreground">Update the details for {app.name}.</p>
           </div>
-          <Card className="w-full max-w-2xl shadow-lg">
+          <Card className="w-full shadow-lg">
             <CardContent className="pt-6">
               <CreateAppForm application={app} />
             </CardContent>
