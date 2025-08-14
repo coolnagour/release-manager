@@ -1,3 +1,4 @@
+
 import { Application } from "@/types/application";
 import { UserProfile } from "@/types/user-profile";
 import { FirestoreDataService } from "./firestore";
@@ -9,6 +10,7 @@ export interface DataService {
   updateApp(id: string, updates: Partial<Omit<Application, "id" | "ownerId" | "createdAt">>): Promise<Application>;
   deleteApp(id: string): Promise<void>;
   findOrCreateUser(user: Pick<UserProfile, "uid" | "email" | "displayName" | "photoURL">): Promise<UserProfile>;
+  getSuperAdminsForApp(userEmails: string[]): Promise<UserProfile[]>;
 }
 
 // For now, we are hardcoding the Firestore implementation.

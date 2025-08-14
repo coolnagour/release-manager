@@ -81,7 +81,7 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
 
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!user || !user.email) {
+    if (!user || !user.email || !userProfile) {
         toast({
             title: "Authentication Error",
             description: "You must be logged in to modify an application.",
@@ -102,7 +102,7 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
 
     startTransition(async () => {
       const result = isEditMode
-        ? await updateApp(application.id, transformedValues, user.email!)
+        ? await updateApp(application.id, transformedValues, user.email!, userProfile.role)
         : await createApp(transformedValues, user.uid, user.email!);
         
       if (result.error) {

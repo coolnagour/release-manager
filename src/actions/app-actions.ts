@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { Application } from "@/types/application";
 import { UserProfile } from "@/types/user-profile";
+import { Role } from "@/types/roles";
 
 const formSchema = z.object({
   appName: z.string().min(2, {
@@ -63,7 +64,7 @@ export async function createApp(values: z.infer<typeof formSchema>, ownerId: str
   };
 }
 
-export async function updateApp(appId: string, values: z.infer<typeof formSchema>, userEmail: string) {
+export async function updateApp(appId: string, values: z.infer<typeof formSchema>, userEmail: string, userRole: Role) {
     const validatedFields = formSchema.safeParse(values);
 
     if (!validatedFields.success) {
@@ -73,27 +74,40 @@ export async function updateApp(appId: string, values: z.infer<typeof formSchema
     }
 
     const app = await db.getApp(appId);
-    if (!app || !app.users.includes(userEmail)) {
-        return {
-            error: "Unauthorized or app not found.",
-        }
+    if (!app) {
+        return { error: "App not found." };
+    }
+    
+    if (!app.users.includes(userEmail)) {
+        return { error: "Unauthorized." };
     }
 
     const { appName, packageName, users } = validatedFields.data;
-    const emailList = users.split(",").map((email) => email.trim());
+    const newEmailList = users.split(",").map((email) => email.trim());
 
-    if (!emailList.includes(app.ownerId)) {
-        const owner = await auth().getUser(app.ownerId);
-        if (owner.email && !emailList.includes(owner.email)) {
-            emailList.push(owner.email);
+    if (userRole !== Role.SUPERADMIN) {
+        const originalSuperAdmins = await db.getSuperAdminsForApp(app.users);
+        const originalSuperAdminEmails = originalSuperAdmins.map(u => u.email);
+
+        for (const saEmail of originalSuperAdminEmails) {
+            if (saEmail && !newEmailList.includes(saEmail)) {
+                return {
+                    error: "Admins cannot remove Super Admins from an application."
+                }
+            }
         }
+    }
+    
+    const owner = await auth().getUser(app.ownerId);
+    if (owner.email && !newEmailList.includes(owner.email)) {
+        newEmailList.push(owner.email);
     }
 
     try {
         await db.updateApp(appId, {
             name: appName,
             packageName,
-            users: emailList,
+            users: newEmailList,
         });
     } catch (error) {
         console.error("Failed to update application:", error);
