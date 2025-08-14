@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTheme } from "next-themes";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,9 +12,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { PlusCircle, Rocket, LogOut, Settings } from "lucide-react";
+import { PlusCircle, Rocket, LogOut, Settings, Moon, Sun } from "lucide-react";
 
 export function Header() {
+  const { setTheme } = useTheme();
+
   return (
     <header className="bg-card border-b sticky top-0 z-10">
       <div className="container mx-auto px-4">
@@ -54,6 +57,20 @@ export function Header() {
                   <Settings className="mr-2 h-4 w-4" />
                   <span>Settings</span>
                 </DropdownMenuItem>
+                 <DropdownMenuSeparator />
+                  <DropdownMenuLabel>Theme</DropdownMenuLabel>
+                   <DropdownMenuItem onClick={() => setTheme("light")}>
+                    <Sun className="mr-2 h-4 w-4" />
+                    <span>Light</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setTheme("dark")}>
+                    <Moon className="mr-2 h-4 w-4" />
+                    <span>Dark</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setTheme("system")}>
+                    <Settings className="mr-2 h-4 w-4" />
+                    <span>System</span>
+                  </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <Link href="/login">
                   <DropdownMenuItem>
