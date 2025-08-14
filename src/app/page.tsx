@@ -64,7 +64,7 @@ function AppPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {apps.map((app) => (
-              <Link href={`/app/${app.id}/edit`} key={app.id}>
+              <Link href={`/app/${app.id}/dashboard`} key={app.id}>
                 <Card className="h-full hover:shadow-md transition-shadow duration-300">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
