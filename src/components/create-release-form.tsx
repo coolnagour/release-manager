@@ -18,7 +18,8 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { createRelease } from "@/actions/release-actions";
 import { useState, useTransition } from "react";
-import { Release } from "@/types/release";
+import { Release, ReleaseStatus } from "@/types/release";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 
 const formSchema = z.object({
   versionName: z.string().min(1, {
@@ -27,6 +28,7 @@ const formSchema = z.object({
   versionCode: z.string().min(1, {
     message: "Version code must be at least 1 character.",
   }),
+  status: z.nativeEnum(ReleaseStatus),
 });
 
 interface CreateReleaseFormProps {
@@ -43,6 +45,7 @@ export function CreateReleaseForm({ appId, onReleaseCreated }: CreateReleaseForm
     defaultValues: {
       versionName: "",
       versionCode: "",
+      status: ReleaseStatus.ACTIVE,
     },
   });
 
@@ -92,6 +95,30 @@ export function CreateReleaseForm({ appId, onReleaseCreated }: CreateReleaseForm
               <FormControl>
                 <Input placeholder="1" {...field} disabled={isPending} />
               </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="status"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Status</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isPending}>
+                    <FormControl>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Select a status" />
+                        </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                        {Object.values(ReleaseStatus).map((status) => (
+                            <SelectItem key={status} value={status} className="capitalize">
+                                {status}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
               <FormMessage />
             </FormItem>
           )}

@@ -4,7 +4,7 @@
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
-import { Release } from "@/types/release";
+import { Release, ReleaseStatus } from "@/types/release";
 
 const formSchema = z.object({
   versionName: z.string().min(1, {
@@ -13,6 +13,7 @@ const formSchema = z.object({
   versionCode: z.string().min(1, {
     message: "Version code is required.",
   }),
+  status: z.nativeEnum(ReleaseStatus),
 });
 
 export async function createRelease(appId: string, values: z.infer<typeof formSchema>): Promise<{ data?: Release, error?: string }> {
@@ -24,12 +25,13 @@ export async function createRelease(appId: string, values: z.infer<typeof formSc
     };
   }
 
-  const { versionName, versionCode } = validatedFields.data;
+  const { versionName, versionCode, status } = validatedFields.data;
 
   try {
     const newRelease = await db.createRelease(appId, {
       versionName,
       versionCode,
+      status,
     });
     revalidatePath(`/app/${appId}/releases`);
     return { data: newRelease };

@@ -7,7 +7,7 @@ import { DataService } from ".";
 import { Application } from "@/types/application";
 import { UserProfile } from "@/types/user-profile";
 import { Role } from "@/types/roles";
-import { Release } from "@/types/release";
+import { Release, ReleaseStatus } from "@/types/release";
 
 const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
 
@@ -63,6 +63,7 @@ export class FirestoreDataService implements DataService {
         id: doc.id,
         versionName: data.versionName,
         versionCode: data.versionCode,
+        status: data.status || ReleaseStatus.ACTIVE,
         applicationId: data.applicationId,
         createdAt: (data.createdAt as Timestamp).toDate(),
     };

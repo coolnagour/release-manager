@@ -36,6 +36,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { Badge } from "@/components/ui/badge";
 
 
 function ReleasesPage() {
@@ -64,6 +65,21 @@ function ReleasesPage() {
   const handleReleaseCreated = (newRelease: Release) => {
     setReleases([newRelease, ...releases]);
     setIsDialogOpen(false);
+  }
+
+  const getBadgeVariant = (status: string) => {
+    switch (status) {
+        case 'active':
+            return 'active';
+        case 'paused':
+            return 'paused';
+        case 'deprecated':
+            return 'deprecated';
+        case 'archived':
+            return 'archived';
+        default:
+            return 'secondary';
+    }
   }
 
   return (
@@ -112,6 +128,7 @@ function ReleasesPage() {
                 <TableRow>
                   <TableHead>Version Name</TableHead>
                   <TableHead>Version Code</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead>Created At</TableHead>
                 </TableRow>
               </TableHeader>
@@ -121,12 +138,15 @@ function ReleasesPage() {
                     <TableRow key={release.id}>
                       <TableCell className="font-medium">{release.versionName}</TableCell>
                       <TableCell>{release.versionCode}</TableCell>
+                      <TableCell>
+                        <Badge variant={getBadgeVariant(release.status)} className="capitalize">{release.status}</Badge>
+                      </TableCell>
                       <TableCell>{new Date(release.createdAt).toLocaleString()}</TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={3} className="text-center">No releases found.</TableCell>
+                    <TableCell colSpan={4} className="text-center">No releases found.</TableCell>
                   </TableRow>
                 )}
               </TableBody>
