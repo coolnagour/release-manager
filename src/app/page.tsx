@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -51,11 +52,11 @@ function AppPage() {
             <Skeleton className="h-40 rounded-lg" />
           </div>
         ) : apps.length === 0 ? (
-          <p>No applications found. <Link href="/create-app" className="text-primary hover:underline">Create one now</Link>.</p>
+          <p>No applications found. <Link href="/app/new" className="text-primary hover:underline">Create one now</Link>.</p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {apps.map((app) => (
-              <Link href="#" key={app.id}>
+              <Link href={`/app/${app.id}/edit`} key={app.id}>
                 <Card className="h-full hover:shadow-md transition-shadow duration-300">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">

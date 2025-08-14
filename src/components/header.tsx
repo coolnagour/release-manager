@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -37,7 +38,7 @@ export function Header() {
               <Skeleton className="h-10 w-36 rounded-md" />
             ) : user ? (
               <Button asChild style={{ backgroundColor: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))" }}>
-                <Link href="/create-app">
+                <Link href="/app/new">
                   <PlusCircle className="mr-2 h-4 w-4" />
                   Create New App
                 </Link>

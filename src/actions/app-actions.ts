@@ -1,9 +1,11 @@
+
 "use server";
 
 import { z } from "zod";
 import { auth } from "firebase-admin";
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
+import { Application } from "@/types/application";
 
 const formSchema = z.object({
   appName: z.string().min(2, {
@@ -60,6 +62,57 @@ export async function createApp(values: z.infer<typeof formSchema>, ownerId: str
   };
 }
 
+export async function updateApp(appId: string, values: z.infer<typeof formSchema>, userEmail: string) {
+    const validatedFields = formSchema.safeParse(values);
+
+    if (!validatedFields.success) {
+        return {
+            error: "Invalid fields!",
+        };
+    }
+
+    const app = await db.getApp(appId);
+    if (!app || !app.allowedEmails.includes(userEmail)) {
+        return {
+            error: "Unauthorized or app not found.",
+        }
+    }
+
+    const { appName, packageName, allowedEmails } = validatedFields.data;
+    const emailList = allowedEmails.split(",").map((email) => email.trim());
+
+    if (!emailList.includes(app.ownerId)) {
+        const owner = await auth().getUser(app.ownerId);
+        if (owner.email && !emailList.includes(owner.email)) {
+            emailList.push(owner.email);
+        }
+    }
+
+    try {
+        await db.updateApp(appId, {
+            name: appName,
+            packageName,
+            allowedEmails: emailList,
+        });
+    } catch (error) {
+        console.error("Failed to update application:", error);
+        return {
+            error: "Failed to update application.",
+        };
+    }
+
+    revalidatePath(`/app/${appId}/edit`);
+    revalidatePath("/");
+
+    return {
+        success: "Application updated successfully!",
+    };
+}
+
 export async function getApps(userEmail: string) {
     return await db.getAppsForUser(userEmail);
+}
+
+export async function getApp(appId: string): Promise<Application | null> {
+    return await db.getApp(appId);
 }

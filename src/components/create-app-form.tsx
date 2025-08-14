@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -19,8 +20,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { createApp } from "@/actions/app-actions";
+import { createApp, updateApp } from "@/actions/app-actions";
 import { useState, useTransition } from "react";
+import { Application } from "@/types/application";
 
 const formSchema = z.object({
   appName: z.string().min(2, {
@@ -39,18 +41,24 @@ const formSchema = z.object({
   }),
 });
 
-export function CreateAppForm() {
+interface CreateAppFormProps {
+    application?: Application;
+}
+
+export function CreateAppForm({ application }: CreateAppFormProps) {
   const router = useRouter();
   const { toast } = useToast();
   const { user } = useAuth();
   const [isPending, startTransition] = useTransition();
 
+  const isEditMode = !!application;
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      appName: "",
-      packageName: "",
-      allowedEmails: "",
+      appName: application?.name || "",
+      packageName: application?.packageName || "",
+      allowedEmails: application?.allowedEmails.join(", ") || "",
     },
   });
 
@@ -58,24 +66,27 @@ export function CreateAppForm() {
     if (!user || !user.email) {
         toast({
             title: "Authentication Error",
-            description: "You must be logged in to create an application.",
+            description: "You must be logged in to modify an application.",
             variant: "destructive",
         });
         return;
     }
 
     startTransition(async () => {
-      const result = await createApp(values, user.uid, user.email!);
+      const result = isEditMode
+        ? await updateApp(application.id, values, user.email!)
+        : await createApp(values, user.uid, user.email!);
+        
       if (result.error) {
         toast({
-          title: "Error Creating Application",
+          title: `Error ${isEditMode ? 'Updating' : 'Creating'} Application`,
           description: result.error,
           variant: "destructive",
         });
       } else {
         toast({
-          title: "Application Created",
-          description: `${values.appName} has been successfully created.`,
+          title: `Application ${isEditMode ? 'Updated' : 'Created'}`,
+          description: `${values.appName} has been successfully ${isEditMode ? 'updated' : 'created'}.`,
         });
         router.push("/");
       }
@@ -108,10 +119,10 @@ export function CreateAppForm() {
             <FormItem>
               <FormLabel>Package Name</FormLabel>
               <FormControl>
-                <Input placeholder="com.example.app" {...field} />
+                <Input placeholder="com.example.app" {...field} disabled={isEditMode} />
               </FormControl>
               <FormDescription>
-                The unique identifier for your app (e.g., Android package name or iOS bundle ID).
+                The unique identifier for your app (e.g., Android package name or iOS bundle ID). Cannot be changed after creation.
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -139,7 +150,7 @@ export function CreateAppForm() {
         <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => router.back()} disabled={isPending}>Cancel</Button>
             <Button type="submit" style={{ backgroundColor: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))" }} disabled={isPending}>
-              {isPending ? "Creating..." : "Create Application"}
+              {isPending ? (isEditMode ? "Saving..." : "Creating...") : (isEditMode ? "Save Changes" : "Create Application")}
             </Button>
         </div>
       </form>
