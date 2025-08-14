@@ -1,5 +1,6 @@
 
 import { Application } from "@/types/application";
+import { Release } from "@/types/release";
 import { UserProfile } from "@/types/user-profile";
 import { FirestoreDataService } from "./firestore";
 
@@ -11,6 +12,9 @@ export interface DataService {
   deleteApp(id: string): Promise<void>;
   findOrCreateUser(user: Pick<UserProfile, "uid" | "email" | "displayName" | "photoURL">): Promise<UserProfile>;
   getSuperAdminsForApp(userEmails: string[]): Promise<UserProfile[]>;
+
+  createRelease(appId: string, releaseData: Omit<Release, "id" | "createdAt" | "applicationId">): Promise<Release>;
+  getReleasesForApp(appId: string): Promise<Release[]>;
 }
 
 // For now, we are hardcoding the Firestore implementation.

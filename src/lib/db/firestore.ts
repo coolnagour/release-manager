@@ -7,6 +7,7 @@ import { DataService } from ".";
 import { Application } from "@/types/application";
 import { UserProfile } from "@/types/user-profile";
 import { Role } from "@/types/roles";
+import { Release } from "@/types/release";
 
 const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
 
@@ -38,7 +39,7 @@ export class FirestoreDataService implements DataService {
       id: doc.id,
       name: data.name,
       packageName: data.packageName,
-      users: data.users || data.allowedEmails || [],
+      users: data.users || [],
       ownerId: data.ownerId,
       createdAt: (data.createdAt as Timestamp).toDate(),
     };
@@ -53,6 +54,17 @@ export class FirestoreDataService implements DataService {
       photoURL: data.photoURL,
       role: data.role,
       createdAt: (data.createdAt as Timestamp).toDate(),
+    };
+  }
+
+  private toRelease(doc: FirebaseFirestore.DocumentSnapshot): Release {
+    const data = doc.data()!;
+    return {
+        id: doc.id,
+        versionName: data.versionName,
+        versionCode: data.versionCode,
+        applicationId: data.applicationId,
+        createdAt: (data.createdAt as Timestamp).toDate(),
     };
   }
 
@@ -125,7 +137,6 @@ export class FirestoreDataService implements DataService {
       createdAt: Timestamp.fromDate(newUser.createdAt),
     });
     
-    // We can't just return newUser because the role might be a plain string from Firestore
     const createdDoc = await userRef.get();
     return this.toUserProfile(createdDoc);
   }
@@ -140,5 +151,22 @@ export class FirestoreDataService implements DataService {
         .get();
 
     return snapshot.docs.map(this.toUserProfile);
+  }
+
+  async createRelease(appId: string, releaseData: Omit<Release, "id" | "createdAt" | "applicationId">): Promise<Release> {
+      const releaseRef = await appsCollection.doc(appId).collection("releases").add({
+          ...releaseData,
+          applicationId: appId,
+          createdAt: Timestamp.now(),
+      });
+      const newReleaseDoc = await releaseRef.get();
+      return this.toRelease(newReleaseDoc);
+  }
+
+  async getReleasesForApp(appId: string): Promise<Release[]> {
+      const snapshot = await appsCollection.doc(appId).collection("releases")
+          .orderBy("createdAt", "desc")
+          .get();
+      return snapshot.docs.map(this.toRelease);
   }
 }
