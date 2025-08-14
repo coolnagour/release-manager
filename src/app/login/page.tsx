@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -12,15 +12,42 @@ import {
 } from "@/components/ui/card";
 import { GoogleIcon } from "@/components/icons/google-icon";
 import { Rocket } from "lucide-react";
+import { useAuth } from "@/contexts/auth-context";
+import { useToast } from "@/hooks/use-toast";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { user, signInWithGoogle, loading } = useAuth();
+  const { toast } = useToast();
 
-  const handleLogin = () => {
-    // In a real application, this would trigger the Firebase Google Auth flow.
-    // For this UI-only example, we'll just navigate to the main page.
-    router.push("/");
+  useEffect(() => {
+    if (user) {
+      const redirect = searchParams.get("redirect");
+      router.replace(redirect || "/");
+    }
+  }, [user, router, searchParams]);
+
+  const handleLogin = async () => {
+    try {
+      await signInWithGoogle();
+    } catch (error) {
+      console.error("Login failed", error);
+      toast({
+        title: "Login Failed",
+        description: "Could not sign you in with Google. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
+
+  if (loading || user) {
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center p-4">
+        <p>Loading...</p>
+      </main>
+    );
+  }
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-4">
