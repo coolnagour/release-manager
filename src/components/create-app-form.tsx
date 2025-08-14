@@ -2,7 +2,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { useFieldArray, useForm } from "react-hook-form";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
@@ -18,12 +18,13 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { createApp, updateApp } from "@/actions/app-actions";
 import { useState, useTransition } from "react";
 import { Application } from "@/types/application";
 import { Role } from "@/types/roles";
+import { Trash } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 
 const formSchema = z.object({
   appName: z.string().min(2, {
@@ -37,7 +38,7 @@ const formSchema = z.object({
     .regex(/^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+[0-9a-z_]$/i, {
       message: "Invalid package name format.",
     }),
-  allowedEmails: z.string().min(1, {
+  allowedEmails: z.array(z.string().email({ message: "Invalid email address." })).min(1, {
     message: "Please enter at least one email address.",
   }),
 });
@@ -51,6 +52,7 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
   const { toast } = useToast();
   const { user, userProfile } = useAuth();
   const [isPending, startTransition] = useTransition();
+  const [newUserEmail, setNewUserEmail] = useState("");
 
   const isEditMode = !!application;
   const isSuperAdmin = userProfile?.role === Role.SUPERADMIN;
@@ -64,9 +66,14 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
     defaultValues: {
       appName: application?.name || "",
       packageName: application?.packageName || "",
-      allowedEmails: application?.allowedEmails.join(", ") || "",
+      allowedEmails: application?.allowedEmails || [],
     },
   });
+
+    const { fields, append, remove } = useFieldArray({
+        control: form.control,
+        name: "allowedEmails",
+    });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     if (!user || !user.email) {
@@ -79,9 +86,13 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
     }
 
     startTransition(async () => {
+        const transformedValues = {
+            ...values,
+            allowedEmails: values.allowedEmails.join(','),
+        };
       const result = isEditMode
-        ? await updateApp(application.id, values, user.email!)
-        : await createApp(values, user.uid, user.email!);
+        ? await updateApp(application.id, transformedValues, user.email!)
+        : await createApp(transformedValues, user.uid, user.email!);
         
       if (result.error) {
         toast({
@@ -102,6 +113,20 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
         }
       }
     });
+  }
+
+  const handleAddUser = () => {
+    const emailValidation = z.string().email().safeParse(newUserEmail);
+    if (emailValidation.success) {
+        if (fields.some(field => field.value === newUserEmail)) {
+            toast({ title: "User already exists", description: "This email is already in the list.", variant: "destructive" });
+        } else {
+            append({ value: newUserEmail });
+            setNewUserEmail("");
+        }
+    } else {
+        toast({ title: "Invalid Email", description: "Please enter a valid email address.", variant: "destructive" });
+    }
   }
 
   return (
@@ -139,26 +164,58 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
             </FormItem>
           )}
         />
+        
         <FormField
           control={form.control}
           name="allowedEmails"
-          render={({ field }) => (
+          render={() => (
             <FormItem>
-              <FormLabel>Allowed Emails</FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder="user1@example.com, user2@example.com"
-                  {...field}
-                  disabled={isPending || (isEditMode && !canEditAllowedEmails)}
-                />
-              </FormControl>
-              <FormDescription>
-                A comma-separated list of Google accounts that can manage this application.
-              </FormDescription>
-              <FormMessage />
+                <FormLabel>Users</FormLabel>
+                <FormDescription>
+                    These users can access and manage this application's releases.
+                </FormDescription>
+                <Card>
+                    <CardContent className="pt-6">
+                        <div className="space-y-4">
+                            {fields.map((field, index) => (
+                                <div key={field.id} className="flex items-center justify-between">
+                                    <span>{field.value}</span>
+                                    <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={isPending || !canEditAllowedEmails}>
+                                        <Trash className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                </div>
+                            ))}
+                             {fields.length === 0 && (
+                                <p className="text-sm text-muted-foreground text-center">No users have been added yet.</p>
+                            )}
+                        </div>
+                    </CardContent>
+                </Card>
+                 <FormMessage />
             </FormItem>
           )}
         />
+
+        {(isSuperAdmin || isAdmin) && (
+             <Card>
+                <CardHeader>
+                    <CardTitle className="text-lg">Add New User</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="flex gap-2">
+                        <Input 
+                            type="email"
+                            placeholder="user@example.com"
+                            value={newUserEmail}
+                            onChange={(e) => setNewUserEmail(e.target.value)}
+                            disabled={isPending || !canEditAllowedEmails}
+                        />
+                        <Button type="button" onClick={handleAddUser} disabled={isPending || !canEditAllowedEmails}>Add User</Button>
+                    </div>
+                </CardContent>
+            </Card>
+        )}
+
         <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => router.back()} disabled={isPending}>Cancel</Button>
             <Button type="submit" style={{ backgroundColor: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))" }} disabled={isPending || (isEditMode && !canEditAppName && !canEditAllowedEmails)}>
@@ -169,5 +226,4 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
     </Form>
   );
 }
-
     
