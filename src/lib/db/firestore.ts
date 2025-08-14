@@ -43,6 +43,18 @@ export class FirestoreDataService implements DataService {
     };
   }
 
+  private toUserProfile(doc: FirebaseFirestore.DocumentSnapshot): UserProfile {
+    const data = doc.data()!;
+    return {
+      uid: data.uid,
+      email: data.email,
+      displayName: data.displayName,
+      photoURL: data.photoURL,
+      role: data.role,
+      createdAt: (data.createdAt as Timestamp).toDate(),
+    };
+  }
+
   async createApp(appData: Omit<Application, "id" | "createdAt">): Promise<Application> {
     const appRef = await appsCollection.add({
       ...appData,
@@ -92,7 +104,7 @@ export class FirestoreDataService implements DataService {
     const userDoc = await userRef.get();
 
     if (userDoc.exists) {
-      return userDoc.data() as UserProfile;
+      return this.toUserProfile(userDoc);
     }
 
     const usersSnapshot = await usersCollection.limit(1).get();
@@ -107,7 +119,10 @@ export class FirestoreDataService implements DataService {
       createdAt: new Date(),
     };
 
-    await userRef.set(newUser);
+    await userRef.set({
+      ...newUser,
+      createdAt: Timestamp.fromDate(newUser.createdAt),
+    });
     return newUser;
   }
 }
