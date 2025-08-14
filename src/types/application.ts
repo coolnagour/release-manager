@@ -2,7 +2,7 @@ export interface Application {
   id: string;
   name: string;
   packageName: string;
-  allowedEmails: string[];
+  users: string[];
   ownerId: string;
   createdAt: Date;
 }

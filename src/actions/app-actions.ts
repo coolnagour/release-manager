@@ -20,7 +20,7 @@ const formSchema = z.object({
     .regex(/^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+[0-9a-z_]$/i, {
       message: "Invalid package name format.",
     }),
-  allowedEmails: z.string().min(1, {
+  users: z.string().min(1, {
     message: "Please enter at least one email address.",
   }),
 });
@@ -34,9 +34,9 @@ export async function createApp(values: z.infer<typeof formSchema>, ownerId: str
     };
   }
 
-  const { appName, packageName, allowedEmails } = validatedFields.data;
+  const { appName, packageName, users } = validatedFields.data;
 
-  const emailList = allowedEmails.split(",").map((email) => email.trim());
+  const emailList = users.split(",").map((email) => email.trim());
 
   if (!emailList.includes(ownerEmail)) {
     emailList.push(ownerEmail);
@@ -46,7 +46,7 @@ export async function createApp(values: z.infer<typeof formSchema>, ownerId: str
     await db.createApp({
       name: appName,
       packageName,
-      allowedEmails: emailList,
+      users: emailList,
       ownerId,
     });
   } catch (error) {
@@ -73,14 +73,14 @@ export async function updateApp(appId: string, values: z.infer<typeof formSchema
     }
 
     const app = await db.getApp(appId);
-    if (!app || !app.allowedEmails.includes(userEmail)) {
+    if (!app || !app.users.includes(userEmail)) {
         return {
             error: "Unauthorized or app not found.",
         }
     }
 
-    const { appName, packageName, allowedEmails } = validatedFields.data;
-    const emailList = allowedEmails.split(",").map((email) => email.trim());
+    const { appName, packageName, users } = validatedFields.data;
+    const emailList = users.split(",").map((email) => email.trim());
 
     if (!emailList.includes(app.ownerId)) {
         const owner = await auth().getUser(app.ownerId);
@@ -93,7 +93,7 @@ export async function updateApp(appId: string, values: z.infer<typeof formSchema
         await db.updateApp(appId, {
             name: appName,
             packageName,
-            allowedEmails: emailList,
+            users: emailList,
         });
     } catch (error) {
         console.error("Failed to update application:", error);

@@ -29,7 +29,7 @@ function AppDashboardPage() {
       getApp(appId)
         .then((data) => {
           if (data) {
-            if (!data.allowedEmails.includes(user.email!)) {
+            if (!data.users.includes(user.email!)) {
               setError("You are not authorized to view this application.");
             } else {
               setApp(data);

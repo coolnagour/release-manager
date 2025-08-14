@@ -38,7 +38,7 @@ export class FirestoreDataService implements DataService {
       id: doc.id,
       name: data.name,
       packageName: data.packageName,
-      allowedEmails: data.allowedEmails,
+      users: data.users || data.allowedEmails || [],
       ownerId: data.ownerId,
       createdAt: (data.createdAt as Timestamp).toDate(),
     };
@@ -75,7 +75,7 @@ export class FirestoreDataService implements DataService {
 
   async getAppsForUser(userEmail: string): Promise<Application[]> {
     const snapshot = await appsCollection
-      .where("allowedEmails", "array-contains", userEmail)
+      .where("users", "array-contains", userEmail)
       .orderBy("createdAt", "desc")
       .get();
       

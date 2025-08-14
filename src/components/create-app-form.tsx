@@ -38,7 +38,7 @@ const formSchema = z.object({
     .regex(/^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+[0-9a-z_]$/i, {
       message: "Invalid package name format.",
     }),
-  allowedEmails: z.array(z.string().email({ message: "Invalid email address." })).min(1, {
+  users: z.array(z.object({ value: z.string().email({ message: "Invalid email address." })})).min(1, {
     message: "Please enter at least one email address.",
   }),
 });
@@ -59,20 +59,20 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
   const isAdmin = userProfile?.role === Role.ADMIN;
   
   const canEditAppName = isSuperAdmin;
-  const canEditAllowedEmails = isSuperAdmin || isAdmin;
+  const canEditUsers = isSuperAdmin || isAdmin;
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       appName: application?.name || "",
       packageName: application?.packageName || "",
-      allowedEmails: application?.allowedEmails || [],
+      users: application?.users.map(email => ({ value: email })) || [],
     },
   });
 
     const { fields, append, remove } = useFieldArray({
         control: form.control,
-        name: "allowedEmails",
+        name: "users",
     });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
@@ -88,7 +88,7 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
     startTransition(async () => {
         const transformedValues = {
             ...values,
-            allowedEmails: values.allowedEmails.join(','),
+            users: values.users.map(u => u.value).join(','),
         };
       const result = isEditMode
         ? await updateApp(application.id, transformedValues, user.email!)
@@ -167,7 +167,7 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
         
         <FormField
           control={form.control}
-          name="allowedEmails"
+          name="users"
           render={() => (
             <FormItem>
                 <FormLabel>Users</FormLabel>
@@ -180,7 +180,7 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
                             {fields.map((field, index) => (
                                 <div key={field.id} className="flex items-center justify-between">
                                     <span>{field.value}</span>
-                                    <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={isPending || !canEditAllowedEmails}>
+                                    <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={isPending || !canEditUsers}>
                                         <Trash className="h-4 w-4 text-destructive" />
                                     </Button>
                                 </div>
@@ -208,9 +208,9 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
                             placeholder="user@example.com"
                             value={newUserEmail}
                             onChange={(e) => setNewUserEmail(e.target.value)}
-                            disabled={isPending || !canEditAllowedEmails}
+                            disabled={isPending || !canEditUsers}
                         />
-                        <Button type="button" onClick={handleAddUser} disabled={isPending || !canEditAllowedEmails}>Add User</Button>
+                        <Button type="button" onClick={handleAddUser} disabled={isPending || !canEditUsers}>Add User</Button>
                     </div>
                 </CardContent>
             </Card>
@@ -218,7 +218,7 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
 
         <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => router.back()} disabled={isPending}>Cancel</Button>
-            <Button type="submit" style={{ backgroundColor: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))" }} disabled={isPending || (isEditMode && !canEditAppName && !canEditAllowedEmails)}>
+            <Button type="submit" style={{ backgroundColor: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))" }} disabled={isPending || (isEditMode && !canEditAppName && !canEditUsers)}>
               {isPending ? (isEditMode ? "Saving..." : "Creating...") : (isEditMode ? "Save Changes" : "Create Application")}
             </Button>
         </div>
