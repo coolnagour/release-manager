@@ -1,7 +1,6 @@
 
 "use client";
 
-import { Header } from "@/components/header";
 import { CreateAppForm } from "@/components/create-app-form";
 import {
   Card,
@@ -61,7 +60,7 @@ function EditAppPage() {
                   <Skeleton className="h-7 w-1/2" />
                   <Skeleton className="h-4 w-3/4" />
                 </CardHeader>
-                <CardContent className="space-y-8">
+                <CardContent className="space-y-8 pt-6">
                     <div className="space-y-2">
                         <Skeleton className="h-4 w-24" />
                         <Skeleton className="h-10 w-full" />
@@ -92,7 +91,7 @@ function EditAppPage() {
   return (
       <div className="p-4 sm:p-6 lg:p-8">
           <div className="mb-6">
-             <h1 className="text-3xl font-bold tracking-tight font-headline">Edit Application</h1>
+             <h1 className="text-3xl font-bold tracking-tight font-headline">Application Settings</h1>
              <p className="text-muted-foreground">Update the details for {app.name}.</p>
           </div>
           <Card className="w-full max-w-2xl shadow-lg">
@@ -106,3 +105,4 @@ function EditAppPage() {
 
 export default EditAppPage;
 
+    

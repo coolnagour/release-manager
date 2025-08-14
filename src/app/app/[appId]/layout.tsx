@@ -44,7 +44,7 @@ export default function AppLayout({
   const pathname = usePathname();
   const params = useParams();
   const { setTheme } = useTheme();
-  const { user, userProfile } = useAuth();
+  const { user, userProfile, logout } = useAuth();
   const [app, setApp] = useState<Application | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -89,13 +89,6 @@ export default function AppLayout({
                             <h2 className="font-semibold text-lg">{app.name}</h2>
                             <p className="text-xs text-muted-foreground">{app.packageName}</p>
                         </div>
-                        {canEdit && (
-                            <Button asChild variant="ghost" size="icon" className="h-7 w-7">
-                                <Link href={`/app/${appId}/edit`}>
-                                    <Pencil />
-                                </Link>
-                            </Button>
-                        )}
                     </div>
                 </div>
              ) : null}
@@ -114,6 +107,20 @@ export default function AppLayout({
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              {canEdit && (
+                <SidebarMenuItem>
+                    <SidebarMenuButton
+                    asChild
+                    isActive={pathname.endsWith("/edit")}
+                    tooltip="Settings"
+                    >
+                    <Link href={`/app/${appId}/edit`}>
+                        <Pencil />
+                        <span>Settings</span>
+                    </Link>
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
             </SidebarMenu>
           </SidebarContent>
           <SidebarFooter className="p-2">
@@ -178,3 +185,5 @@ export default function AppLayout({
     </SidebarProvider>
   );
 }
+
+    

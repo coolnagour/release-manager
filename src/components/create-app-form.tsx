@@ -53,8 +53,11 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
   const [isPending, startTransition] = useTransition();
 
   const isEditMode = !!application;
-  const canEditAll = userProfile?.role === Role.SUPERADMIN;
-  const canEditUsers = userProfile?.role === Role.ADMIN || userProfile?.role === Role.SUPERADMIN;
+  const isSuperAdmin = userProfile?.role === Role.SUPERADMIN;
+  const isAdmin = userProfile?.role === Role.ADMIN;
+  
+  const canEditAppName = isSuperAdmin;
+  const canEditAllowedEmails = isSuperAdmin || isAdmin;
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -91,8 +94,12 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
           title: `Application ${isEditMode ? 'Updated' : 'Created'}`,
           description: `${values.appName} has been successfully ${isEditMode ? 'updated' : 'created'}.`,
         });
-        router.push("/");
-        router.refresh();
+        if (isEditMode) {
+            router.refresh();
+        } else {
+            router.push("/");
+            router.refresh();
+        }
       }
     });
   }
@@ -107,7 +114,7 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
             <FormItem>
               <FormLabel>App Name</FormLabel>
               <FormControl>
-                <Input placeholder="My Awesome App" {...field} disabled={isEditMode && !canEditAll} />
+                <Input placeholder="My Awesome App" {...field} disabled={isPending || (isEditMode && !canEditAppName)} />
               </FormControl>
               <FormDescription>
                 This is the public display name of your application.
@@ -123,7 +130,7 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
             <FormItem>
               <FormLabel>Package Name</FormLabel>
               <FormControl>
-                <Input placeholder="com.example.app" {...field} disabled={isEditMode} />
+                <Input placeholder="com.example.app" {...field} disabled={isPending || isEditMode} />
               </FormControl>
               <FormDescription>
                 The unique identifier for your app (e.g., Android package name or iOS bundle ID). Cannot be changed after creation.
@@ -142,7 +149,7 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
                 <Textarea
                   placeholder="user1@example.com, user2@example.com"
                   {...field}
-                  disabled={isEditMode && !canEditUsers}
+                  disabled={isPending || (isEditMode && !canEditAllowedEmails)}
                 />
               </FormControl>
               <FormDescription>
@@ -154,7 +161,7 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
         />
         <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => router.back()} disabled={isPending}>Cancel</Button>
-            <Button type="submit" style={{ backgroundColor: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))" }} disabled={isPending}>
+            <Button type="submit" style={{ backgroundColor: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))" }} disabled={isPending || (isEditMode && !canEditAppName && !canEditAllowedEmails)}>
               {isPending ? (isEditMode ? "Saving..." : "Creating...") : (isEditMode ? "Save Changes" : "Create Application")}
             </Button>
         </div>
@@ -162,3 +169,5 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
     </Form>
   );
 }
+
+    
