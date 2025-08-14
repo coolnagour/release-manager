@@ -241,7 +241,6 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
         )}
 
         <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => router.back()} disabled={isPending}>Cancel</Button>
             <Button type="submit" style={{ backgroundColor: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))" }} disabled={isPending || (isEditMode && !canEditAppName && !canEditUsers)}>
               {isPending ? (isEditMode ? "Saving..." : "Creating...") : (isEditMode ? "Save Changes" : "Create Application")}
             </Button>
