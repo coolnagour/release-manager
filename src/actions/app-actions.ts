@@ -85,6 +85,10 @@ export async function updateApp(appId: string, values: z.infer<typeof formSchema
     const { appName, packageName, users } = validatedFields.data;
     const newEmailList = users.split(",").map((email) => email.trim());
 
+    if (!newEmailList.includes(userEmail)) {
+        return { error: "You cannot remove yourself from an application." };
+    }
+
     if (userRole !== Role.SUPERADMIN) {
         const originalSuperAdmins = await db.getSuperAdminsForApp(app.users);
         const originalSuperAdminEmails = originalSuperAdmins.map(u => u.email);

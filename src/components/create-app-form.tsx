@@ -140,6 +140,19 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
     }
   }
 
+  const handleRemoveUser = (index: number) => {
+    const userToRemove = fields[index].value;
+    if (userToRemove === user?.email) {
+      toast({
+        title: "Action Not Allowed",
+        description: "You cannot remove yourself from the application.",
+        variant: "destructive",
+      });
+      return;
+    }
+    remove(index);
+  }
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
@@ -191,7 +204,7 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
                             {fields.map((field, index) => (
                                 <div key={field.id} className="flex items-center justify-between">
                                     <span>{field.value}</span>
-                                    <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={isPending || !canEditUsers}>
+                                    <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveUser(index)} disabled={isPending || !canEditUsers}>
                                         <Trash className="h-4 w-4 text-destructive" />
                                     </Button>
                                 </div>
