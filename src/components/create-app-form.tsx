@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/auth-context";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -18,6 +19,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { createApp } from "@/actions/app-actions";
+import { useState, useTransition } from "react";
 
 const formSchema = z.object({
   appName: z.string().min(2, {
@@ -39,6 +42,8 @@ const formSchema = z.object({
 export function CreateAppForm() {
   const router = useRouter();
   const { toast } = useToast();
+  const { user } = useAuth();
+  const [isPending, startTransition] = useTransition();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -50,16 +55,31 @@ export function CreateAppForm() {
   });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    // This is where you would handle the form submission, e.g., API call.
-    console.log(values);
+    if (!user || !user.email) {
+        toast({
+            title: "Authentication Error",
+            description: "You must be logged in to create an application.",
+            variant: "destructive",
+        });
+        return;
+    }
 
-    toast({
-      title: "Application Created",
-      description: `${values.appName} has been successfully created.`,
+    startTransition(async () => {
+      const result = await createApp(values, user.uid, user.email!);
+      if (result.error) {
+        toast({
+          title: "Error Creating Application",
+          description: result.error,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Application Created",
+          description: `${values.appName} has been successfully created.`,
+        });
+        router.push("/");
+      }
     });
-
-    // For this UI-only example, we'll navigate back to the home page.
-    router.push("/");
   }
 
   return (
@@ -117,8 +137,10 @@ export function CreateAppForm() {
           )}
         />
         <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => router.back()}>Cancel</Button>
-            <Button type="submit" style={{ backgroundColor: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))" }}>Create Application</Button>
+            <Button type="button" variant="outline" onClick={() => router.back()} disabled={isPending}>Cancel</Button>
+            <Button type="submit" style={{ backgroundColor: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))" }} disabled={isPending}>
+              {isPending ? "Creating..." : "Create Application"}
+            </Button>
         </div>
       </form>
     </Form>

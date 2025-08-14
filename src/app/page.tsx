@@ -10,41 +10,52 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Rocket } from "lucide-react";
-
-const apps = [
-  {
-    name: "Mobile App",
-    packageName: "com.example.mobileapp",
-    version: "1.2.5",
-  },
-  {
-    name: "Web Portal",
-    packageName: "com.example.webportal",
-    version: "2.0.1",
-  },
-  {
-    name: "API Service",
-    packageName: "com.example.apiservice",
-    version: "3.1.0-alpha",
-  },
-  {
-    name: "Data Processor",
-    packageName: "com.example.dataprocessor",
-    version: "1.0.0",
-  },
-];
+import { useAuth } from "@/contexts/auth-context";
+import { useEffect, useState } from "react";
+import { Application } from "@/types/application";
+import { getApps } from "@/actions/app-actions";
+import { Skeleton } from "@/components/ui/skeleton";
 
 function AppPage() {
+  const { user, loading: authLoading } = useAuth();
+  const [apps, setApps] = useState<Application[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (user?.email) {
+      getApps(user.email)
+        .then((userApps) => {
+          setApps(userApps);
+          setLoading(false);
+        })
+        .catch((err) => {
+          console.error("Failed to fetch apps", err);
+          setLoading(false);
+        });
+    } else if (!authLoading) {
+      setLoading(false);
+    }
+  }, [user, authLoading]);
+
   return (
-      <div className="flex flex-col min-h-screen">
-        <Header />
-        <main className="flex-1 container mx-auto py-8 px-4">
-          <h1 className="text-3xl font-bold tracking-tight mb-6 font-headline">
-            Your Applications
-          </h1>
+    <div className="flex flex-col min-h-screen">
+      <Header />
+      <main className="flex-1 container mx-auto py-8 px-4">
+        <h1 className="text-3xl font-bold tracking-tight mb-6 font-headline">
+          Your Applications
+        </h1>
+        {loading ? (
+           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <Skeleton className="h-40 rounded-lg" />
+            <Skeleton className="h-40 rounded-lg" />
+            <Skeleton className="h-40 rounded-lg" />
+          </div>
+        ) : apps.length === 0 ? (
+          <p>No applications found. <Link href="/create-app" className="text-primary hover:underline">Create one now</Link>.</p>
+        ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {apps.map((app) => (
-              <Link href="#" key={app.packageName}>
+              <Link href="#" key={app.id}>
                 <Card className="h-full hover:shadow-md transition-shadow duration-300">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
@@ -55,15 +66,16 @@ function AppPage() {
                   </CardHeader>
                   <CardContent>
                     <p className="text-sm text-muted-foreground">
-                      Current Version: {app.version}
+                      Created: {new Date(app.createdAt).toLocaleDateString()}
                     </p>
                   </CardContent>
                 </Card>
               </Link>
             ))}
           </div>
-        </main>
-      </div>
+        )}
+      </main>
+    </div>
   );
 }
 
