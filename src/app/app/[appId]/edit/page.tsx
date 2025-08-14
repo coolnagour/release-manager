@@ -52,10 +52,10 @@ function EditAppPage() {
 
   if (isLoading) {
     return (
-        <div className="p-4 sm:p-6 lg:p-8">
+        <div className="p-4 sm:p-6 lg:p-8 flex flex-col flex-1">
             <Skeleton className="h-8 w-48 mb-2" />
             <Skeleton className="h-4 w-64 mb-6" />
-            <Card className="w-full shadow-lg">
+            <Card className="w-full shadow-lg flex-1">
                 <CardHeader>
                   <Skeleton className="h-7 w-1/2" />
                   <Skeleton className="h-4 w-3/4" />
@@ -89,13 +89,13 @@ function EditAppPage() {
 
 
   return (
-      <div className="p-4 sm:p-6 lg:p-8">
+      <div className="p-4 sm:p-6 lg:p-8 flex flex-col flex-1">
           <div className="mb-6">
              <h1 className="text-3xl font-bold tracking-tight font-headline">Application Settings</h1>
              <p className="text-muted-foreground">Update the details for {app.name}.</p>
           </div>
-          <Card className="w-full shadow-lg">
-            <CardContent className="pt-6">
+          <Card className="w-full shadow-lg flex-1">
+            <CardContent className="pt-6 h-full">
               <CreateAppForm application={app} />
             </CardContent>
           </Card>

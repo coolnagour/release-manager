@@ -67,7 +67,7 @@ export default function AppLayout({
 
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen">
+      <div className="flex flex-col md:flex-row min-h-screen">
         <Sidebar>
           <SidebarHeader className="p-2 flex flex-col gap-2">
              <div className="flex justify-between items-center">
@@ -192,7 +192,7 @@ export default function AppLayout({
             )}
           </SidebarFooter>
         </Sidebar>
-        <SidebarInset>{children}</SidebarInset>
+        <SidebarInset className="flex-1 flex flex-col">{children}</SidebarInset>
       </div>
     </SidebarProvider>
   );
