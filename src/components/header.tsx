@@ -19,7 +19,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export function Header() {
   const { setTheme } = useTheme();
-  const { user, logout, loading } = useAuth();
+  const { user, userProfile, logout, loading } = useAuth();
 
   const handleLogout = async () => {
     await logout();
@@ -36,7 +36,7 @@ export function Header() {
           <div className="flex items-center gap-4">
             {loading ? (
               <Skeleton className="h-10 w-36 rounded-md" />
-            ) : user ? (
+            ) : user && userProfile?.role === 'superadmin' ? (
               <Button asChild style={{ backgroundColor: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))" }}>
                 <Link href="/app/new">
                   <PlusCircle className="mr-2 h-4 w-4" />

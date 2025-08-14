@@ -48,10 +48,12 @@ interface CreateAppFormProps {
 export function CreateAppForm({ application }: CreateAppFormProps) {
   const router = useRouter();
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
   const [isPending, startTransition] = useTransition();
 
   const isEditMode = !!application;
+  const canEditAll = userProfile?.role === 'superadmin';
+  const canEditUsers = userProfile?.role === 'admin' || userProfile?.role === 'superadmin';
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -89,6 +91,7 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
           description: `${values.appName} has been successfully ${isEditMode ? 'updated' : 'created'}.`,
         });
         router.push("/");
+        router.refresh();
       }
     });
   }
@@ -103,7 +106,7 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
             <FormItem>
               <FormLabel>App Name</FormLabel>
               <FormControl>
-                <Input placeholder="My Awesome App" {...field} />
+                <Input placeholder="My Awesome App" {...field} disabled={isEditMode && !canEditAll} />
               </FormControl>
               <FormDescription>
                 This is the public display name of your application.
@@ -138,6 +141,7 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
                 <Textarea
                   placeholder="user1@example.com, user2@example.com"
                   {...field}
+                  disabled={isEditMode && !canEditUsers}
                 />
               </FormControl>
               <FormDescription>
