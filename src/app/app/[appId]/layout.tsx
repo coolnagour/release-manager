@@ -14,7 +14,7 @@ import {
   SidebarFooter,
 } from "@/components/ui/sidebar";
 import { Header } from "@/components/header";
-import { LayoutDashboard, LogOut, Moon, Settings, Sun, User as UserIcon } from "lucide-react";
+import { LayoutDashboard, LogOut, Moon, Settings, Sun, User as UserIcon, Pencil } from "lucide-react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -30,6 +30,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
+import { useEffect, useState } from "react";
+import { Application } from "@/types/application";
+import { getApp } from "@/actions/app-actions";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Role } from "@/types/roles";
 
 export default function AppLayout({
   children,
@@ -39,20 +44,61 @@ export default function AppLayout({
   const pathname = usePathname();
   const params = useParams();
   const { setTheme } = useTheme();
-  const { user, logout } = useAuth();
+  const { user, userProfile } = useAuth();
+  const [app, setApp] = useState<Application | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const appId = Array.isArray(params.appId) ? params.appId[0] : params.appId;
+
+  useEffect(() => {
+    if (appId) {
+      setLoading(true);
+      getApp(appId)
+        .then((data) => {
+          setApp(data);
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+    }
+  }, [appId]);
+
+  const canEdit = userProfile?.role === Role.SUPERADMIN || userProfile?.role === Role.ADMIN;
 
   return (
     <SidebarProvider>
       <div className="flex min-h-screen">
         <Sidebar>
-          <SidebarHeader className="p-2 flex justify-between items-center">
-             <Link href="/" className="flex items-center gap-2 font-bold text-lg">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" className="h-6 w-6"><rect width="256" height="256" fill="none"></rect><path d="M139.3,218.8a20.6,20.6,0,0,1-22.6,0L38.2,166.4a20.6,20.6,0,0,1-11.3-18V67.6a20.6,20.6,0,0,1,11.3-18L116.7,3a20.6,20.6,0,0,1,22.6,0l78.5,46.6a20.6,20.6,0,0,1,11.3,18v80.8a20.6,20.6,0,0,1-11.3,18Z" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="12"></path><path d="M178.4,136.2,100,88.9,64.2,111.4a8,8,0,0,0,4,14.7l72.9,25.2a8,8,0,0,0,8-1.5L178,142A8,8,0,0,0,178.4,136.2Z" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="12"></path></svg>
-                <span className="text-sidebar-primary-foreground group-data-[collapsible=icon]:hidden">Release Manager</span>
-            </Link>
-            <SidebarTrigger />
+          <SidebarHeader className="p-2 flex flex-col gap-2">
+             <div className="flex justify-between items-center">
+                <Link href="/" className="flex items-center gap-2 font-bold text-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" className="h-6 w-6"><rect width="256" height="256" fill="none"></rect><path d="M139.3,218.8a20.6,20.6,0,0,1-22.6,0L38.2,166.4a20.6,20.6,0,0,1-11.3-18V67.6a20.6,20.6,0,0,1,11.3-18L116.7,3a20.6,20.6,0,0,1,22.6,0l78.5,46.6a20.6,20.6,0,0,1,11.3,18v80.8a20.6,20.6,0,0,1-11.3,18Z" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="12"></path><path d="M178.4,136.2,100,88.9,64.2,111.4a8,8,0,0,0,4,14.7l72.9,25.2a8,8,0,0,0,8-1.5L178,142A8,8,0,0,0,178.4,136.2Z" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="12"></path></svg>
+                    <span className="text-sidebar-primary-foreground group-data-[collapsible=icon]:hidden">Release Manager</span>
+                </Link>
+                <SidebarTrigger />
+             </div>
+             {loading ? (
+                <div className="space-y-2 p-2 group-data-[collapsible=icon]:hidden">
+                    <Skeleton className="h-5 w-32" />
+                    <Skeleton className="h-4 w-40" />
+                </div>
+             ) : app ? (
+                <div className="p-2 group-data-[collapsible=icon]:hidden">
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <h2 className="font-semibold text-lg">{app.name}</h2>
+                            <p className="text-xs text-muted-foreground">{app.packageName}</p>
+                        </div>
+                        {canEdit && (
+                            <Button asChild variant="ghost" size="icon" className="h-7 w-7">
+                                <Link href={`/app/${appId}/edit`}>
+                                    <Pencil />
+                                </Link>
+                            </Button>
+                        )}
+                    </div>
+                </div>
+             ) : null}
           </SidebarHeader>
           <SidebarContent>
             <SidebarMenu>
