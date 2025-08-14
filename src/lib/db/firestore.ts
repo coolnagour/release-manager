@@ -1,18 +1,28 @@
+
 import "server-only";
 
-import { initializeApp, getApps, getApp, cert } from "firebase-admin/app";
+import { initializeApp, getApps, AppOptions, cert } from "firebase-admin/app";
 import { getFirestore, Timestamp } from "firebase-admin/firestore";
 import { DataService } from ".";
 import { Application } from "@/types/application";
 
-const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_KEY
-  ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY)
-  : undefined;
+const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+
+let appOptions: AppOptions | undefined = undefined;
+
+if (serviceAccountKey) {
+  try {
+    const serviceAccount = JSON.parse(serviceAccountKey);
+    appOptions = {
+      credential: cert(serviceAccount),
+    };
+  } catch (e) {
+    console.error("Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY", e);
+  }
+}
 
 if (!getApps().length) {
-  initializeApp({
-    credential: serviceAccount ? cert(serviceAccount) : undefined,
-  });
+  initializeApp(appOptions);
 }
 
 const firestore = getFirestore();
