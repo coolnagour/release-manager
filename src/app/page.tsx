@@ -10,7 +10,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Rocket } from "lucide-react";
-import { ProtectedRoute } from "@/contexts/auth-context";
 
 const apps = [
   {
@@ -37,7 +36,6 @@ const apps = [
 
 function AppPage() {
   return (
-    <ProtectedRoute>
       <div className="flex flex-col min-h-screen">
         <Header />
         <main className="flex-1 container mx-auto py-8 px-4">
@@ -66,7 +64,6 @@ function AppPage() {
           </div>
         </main>
       </div>
-    </ProtectedRoute>
   );
 }
 

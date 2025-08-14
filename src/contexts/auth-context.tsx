@@ -104,18 +104,22 @@ export function useAuth() {
   return context;
 }
 
+const UNPROTECTED_PATHS = ["/login"];
+
 export function ProtectedRoute({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
+  const isUnprotectedPath = UNPROTECTED_PATHS.includes(pathname);
+
   useEffect(() => {
-    if (!loading && !user) {
+    if (!loading && !user && !isUnprotectedPath) {
       router.push(`/login?redirect=${pathname}`);
     }
-  }, [user, loading, router, pathname]);
+  }, [user, loading, router, pathname, isUnprotectedPath]);
 
-  if (loading || !user) {
+  if (loading || (!user && !isUnprotectedPath)) {
     // You can replace this with a more sophisticated loading spinner
     return (
       <div className="flex flex-col min-h-screen">

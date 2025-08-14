@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/theme-provider";
-import { AuthProvider } from "@/contexts/auth-context";
+import { AuthProvider, ProtectedRoute } from "@/contexts/auth-context";
 
 export const metadata: Metadata = {
   title: "Release Manager",
@@ -36,7 +36,9 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <AuthProvider>
-            {children}
+            <ProtectedRoute>
+              {children}
+            </ProtectedRoute>
             <Toaster />
           </AuthProvider>
         </ThemeProvider>
