@@ -16,9 +16,10 @@ import { useEffect, useState } from "react";
 import { Application } from "@/types/application";
 import { getApps } from "@/actions/app-actions";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Role } from "@/types/roles";
 
 function AppPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, userProfile, loading: authLoading } = useAuth();
   const [apps, setApps] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -52,7 +53,14 @@ function AppPage() {
             <Skeleton className="h-40 rounded-lg" />
           </div>
         ) : apps.length === 0 ? (
-          <p>No applications found. <Link href="/app/new" className="text-primary hover:underline">Create one now</Link>.</p>
+          <p>
+            No applications found.
+            {userProfile?.role === Role.SUPERADMIN && (
+              <Link href="/app/new" className="text-primary hover:underline ml-1">
+                Create one now
+              </Link>
+            )}
+          </p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {apps.map((app) => (
