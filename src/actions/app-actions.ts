@@ -6,6 +6,7 @@ import { auth } from "firebase-admin";
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { Application } from "@/types/application";
+import { UserProfile } from "@/types/user-profile";
 
 const formSchema = z.object({
   appName: z.string().min(2, {
@@ -115,4 +116,10 @@ export async function getApps(userEmail: string) {
 
 export async function getApp(appId: string): Promise<Application | null> {
     return await db.getApp(appId);
+}
+
+export async function findOrCreateUser(
+  user: Pick<UserProfile, "uid" | "email" | "displayName" | "photoURL">
+): Promise<UserProfile> {
+  return await db.findOrCreateUser(user);
 }

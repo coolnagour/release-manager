@@ -5,6 +5,7 @@ import { initializeApp, getApps, AppOptions, cert } from "firebase-admin/app";
 import { getFirestore, Timestamp } from "firebase-admin/firestore";
 import { DataService } from ".";
 import { Application } from "@/types/application";
+import { UserProfile } from "@/types/user-profile";
 
 const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
 
@@ -27,6 +28,7 @@ if (!getApps().length) {
 
 const firestore = getFirestore();
 const appsCollection = firestore.collection("applications");
+const usersCollection = firestore.collection("users");
 
 export class FirestoreDataService implements DataService {
   private toApplication(doc: FirebaseFirestore.DocumentSnapshot): Application {
@@ -81,5 +83,31 @@ export class FirestoreDataService implements DataService {
 
   async deleteApp(id: string): Promise<void> {
     await appsCollection.doc(id).delete();
+  }
+
+  async findOrCreateUser(
+    userData: Pick<UserProfile, "uid" | "email" | "displayName" | "photoURL">
+  ): Promise<UserProfile> {
+    const userRef = usersCollection.doc(userData.uid);
+    const userDoc = await userRef.get();
+
+    if (userDoc.exists) {
+      return userDoc.data() as UserProfile;
+    }
+
+    const usersSnapshot = await usersCollection.limit(1).get();
+    const isFirstUser = usersSnapshot.empty;
+
+    const newUser: UserProfile = {
+      uid: userData.uid,
+      email: userData.email,
+      displayName: userData.displayName,
+      photoURL: userData.photoURL,
+      role: isFirstUser ? "superadmin" : "user",
+      createdAt: new Date(),
+    };
+
+    await userRef.set(newUser);
+    return newUser;
   }
 }

@@ -19,11 +19,14 @@ import {
 } from "firebase/auth";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Suspense } from "react";
+import { UserProfile } from "@/types/user-profile";
+import { findOrCreateUser } from "@/actions/app-actions";
 
 const USE_MOCK_AUTH = process.env.NEXT_PUBLIC_USE_MOCK_AUTH === "true";
 
 interface AuthContextType {
   user: User | null;
+  userProfile: UserProfile | null;
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
@@ -58,18 +61,40 @@ const mockUser: User = {
   toJSON: () => ({}),
 };
 
+const mockUserProfile: UserProfile = {
+  uid: "mock-user-id",
+  email: "mock.user@example.com",
+  displayName: "Mock User",
+  photoURL: "https://placehold.co/100x100.png",
+  role: "superadmin",
+  createdAt: new Date(),
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (USE_MOCK_AUTH) {
       setUser(mockUser);
+      setUserProfile(mockUserProfile);
       setLoading(false);
       return;
     }
 
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        const profile = await findOrCreateUser({
+          uid: user.uid,
+          email: user.email!,
+          displayName: user.displayName,
+          photoURL: user.photoURL,
+        });
+        setUserProfile(profile);
+      } else {
+        setUserProfile(null);
+      }
       setUser(user);
       setLoading(false);
     });
@@ -80,6 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signInWithGoogle = async () => {
     if (USE_MOCK_AUTH) {
       setUser(mockUser);
+      setUserProfile(mockUserProfile);
       return
     };
     const provider = new GoogleAuthProvider();
@@ -89,13 +115,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     if (USE_MOCK_AUTH) {
       setUser(null);
+      setUserProfile(null);
       return;
     };
     await signOut(auth);
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signInWithGoogle, logout }}>
+    <AuthContext.Provider value={{ user, userProfile, loading, signInWithGoogle, logout }}>
       {children}
     </AuthContext.Provider>
   );
