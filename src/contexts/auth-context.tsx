@@ -7,7 +7,7 @@ import {
   useState,
   ReactNode,
 } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { auth } from "@/lib/firebase";
 import {
   onAuthStateChanged,
@@ -17,6 +17,7 @@ import {
   User,
 } from "firebase/auth";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Suspense } from "react";
 
 const USE_MOCK_AUTH = process.env.NEXT_PUBLIC_USE_MOCK_AUTH === "true";
 
@@ -76,7 +77,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signInWithGoogle = async () => {
-    if (USE_MOCK_AUTH) return;
+    if (USE_MOCK_AUTH) {
+      setUser(mockUser);
+      return
+    };
     const provider = new GoogleAuthProvider();
     await signInWithPopup(auth, provider);
   };
@@ -106,21 +110,25 @@ export function useAuth() {
 
 const UNPROTECTED_PATHS = ["/login"];
 
-export function ProtectedRoute({ children }: { children: ReactNode }) {
+function ProtectedRouteContent({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   const isUnprotectedPath = UNPROTECTED_PATHS.includes(pathname);
 
   useEffect(() => {
     if (!loading && !user && !isUnprotectedPath) {
-      router.push(`/login?redirect=${pathname}`);
+      const redirect = searchParams.get("redirect");
+      router.push(redirect || `/login?redirect=${pathname}`);
+    } else if (!loading && user && isUnprotectedPath) {
+        const redirect = searchParams.get("redirect");
+        router.push(redirect || "/");
     }
-  }, [user, loading, router, pathname, isUnprotectedPath]);
+  }, [user, loading, router, pathname, isUnprotectedPath, searchParams]);
 
   if (loading || (!user && !isUnprotectedPath)) {
-    // You can replace this with a more sophisticated loading spinner
     return (
       <div className="flex flex-col min-h-screen">
         <header className="bg-card border-b sticky top-0 z-10">
@@ -150,4 +158,13 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
   }
 
   return <>{children}</>;
+}
+
+
+export function ProtectedRoute({ children }: { children: ReactNode }) {
+    return (
+      <Suspense fallback={<div>Loading...</div>}>
+        <ProtectedRouteContent>{children}</ProtectedRouteContent>
+      </Suspense>
+    )
 }
