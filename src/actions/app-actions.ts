@@ -36,7 +36,7 @@ export async function createApp(values: z.infer<typeof formSchema>, ownerId: str
 
   const { appName, packageName, users } = validatedFields.data;
 
-  const emailList = users.split(",").map((email) => email.trim());
+  const emailList = users.split(",").map((email) => email.trim()).filter(email => email);
 
   if (!emailList.includes(ownerEmail)) {
     emailList.push(ownerEmail);

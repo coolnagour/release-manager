@@ -20,7 +20,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { createApp, updateApp } from "@/actions/app-actions";
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { Application } from "@/types/application";
 import { Role } from "@/types/roles";
 import { Trash } from "lucide-react";
@@ -38,9 +38,7 @@ const formSchema = z.object({
     .regex(/^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+[0-9a-z_]$/i, {
       message: "Invalid package name format.",
     }),
-  users: z.array(z.object({ value: z.string().email({ message: "Invalid email address." })})).min(1, {
-    message: "Please enter at least one email address.",
-  }),
+  users: z.array(z.object({ value: z.string().email({ message: "Invalid email address." })})),
 });
 
 interface CreateAppFormProps {
@@ -75,6 +73,13 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
         name: "users",
     });
 
+  useEffect(() => {
+    if (!isEditMode && user?.email && !fields.some(field => field.value === user.email)) {
+        append({ value: user.email });
+    }
+  }, [isEditMode, user, fields, append])
+
+
   function onSubmit(values: z.infer<typeof formSchema>) {
     if (!user || !user.email) {
         toast({
@@ -84,12 +89,18 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
         });
         return;
     }
+    
+    const transformedValues = {
+        ...values,
+        users: values.users.map(u => u.value).join(','),
+    };
+
+    if (values.users.length === 0) {
+        transformedValues.users = user.email;
+    }
+
 
     startTransition(async () => {
-        const transformedValues = {
-            ...values,
-            users: values.users.map(u => u.value).join(','),
-        };
       const result = isEditMode
         ? await updateApp(application.id, transformedValues, user.email!)
         : await createApp(transformedValues, user.uid, user.email!);
