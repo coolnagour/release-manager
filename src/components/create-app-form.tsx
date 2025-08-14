@@ -179,10 +179,10 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
             <FormItem>
               <FormLabel>Package Name</FormLabel>
               <FormControl>
-                <Input placeholder="com.example.app" {...field} disabled={isPending || isEditMode} />
+                <Input placeholder="com.example.app" {...field} disabled={isPending || (isEditMode && !isSuperAdmin)} />
               </FormControl>
               <FormDescription>
-                The unique identifier for your app (e.g., Android package name or iOS bundle ID). Cannot be changed after creation.
+                The unique identifier for your app (e.g., Android package name or iOS bundle ID).
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -250,3 +250,4 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
   );
 }
     
+
