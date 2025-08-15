@@ -42,7 +42,7 @@ function AppPage() {
   return (
     <div className="flex flex-col min-h-screen">
       <Header />
-      <main className="flex-1 container mx-auto py-8 px-4">
+      <main className="flex-1 w-full px-4 md:px-6 lg:px-8 py-8">
         <h1 className="text-3xl font-bold tracking-tight mb-6 font-headline">
           Your Applications
         </h1>

@@ -161,7 +161,7 @@ function ProtectedRouteContent({ children }: { children: ReactNode }) {
     return (
       <div className="flex flex-col min-h-screen">
         <header className="bg-card border-b sticky top-0 z-10">
-          <div className="container mx-auto px-4">
+          <div className="w-full px-4 md:px-6 lg:px-8">
             <div className="flex h-16 items-center justify-between">
               <div className="flex items-center gap-2">
                 <Skeleton className="h-6 w-6 rounded-full" />
@@ -174,7 +174,7 @@ function ProtectedRouteContent({ children }: { children: ReactNode }) {
             </div>
           </div>
         </header>
-        <main className="flex-1 container mx-auto py-8 px-4">
+        <main className="flex-1 w-full px-4 md:px-6 lg:px-8 py-8">
           <Skeleton className="h-8 w-64 mb-6" />
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <Skeleton className="h-36 rounded-lg" />

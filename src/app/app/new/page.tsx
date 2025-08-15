@@ -30,7 +30,7 @@ function CreateAppPage() {
     return (
        <div className="flex flex-col min-h-screen">
         <Header />
-        <main className="flex-1 container mx-auto py-8 px-4 flex items-center justify-center">
+        <main className="flex-1 px-4 md:px-6 lg:px-8 py-8 flex items-center justify-center">
             <p>Loading or unauthorized...</p>
         </main>
       </div>
@@ -40,7 +40,7 @@ function CreateAppPage() {
   return (
       <div className="flex flex-col min-h-screen">
         <Header />
-        <main className="flex-1 container mx-auto py-8 px-4 flex items-center justify-center">
+        <main className="flex-1 px-4 md:px-6 lg:px-8 py-8 flex items-center justify-center">
           <Card className="w-full max-w-2xl shadow-lg">
             <CardHeader>
               <CardTitle className="text-2xl font-headline">Create a New Application</CardTitle>
