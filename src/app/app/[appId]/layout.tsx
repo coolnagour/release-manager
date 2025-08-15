@@ -74,7 +74,7 @@ export default function AppLayout({
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" className="h-6 w-6"><rect width="256" height="256" fill="none"></rect><path d="M139.3,218.8a20.6,20.6,0,0,1-22.6,0L38.2,166.4a20.6,20.6,0,0,1-11.3-18V67.6a20.6,20.6,0,0,1,11.3-18L116.7,3a20.6,20.6,0,0,1,22.6,0l78.5,46.6a20.6,20.6,0,0,1,11.3,18v80.8a20.6,20.6,0,0,1-11.3,18Z" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="12"></path><path d="M178.4,136.2,100,88.9,64.2,111.4a8,8,0,0,0,4,14.7l72.9,25.2a8,8,0,0,0,8-1.5L178,142A8,8,0,0,0,178.4,136.2Z" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="12"></path></svg>
                     <span className="text-sidebar-primary-foreground group-data-[collapsible=icon]:hidden">Release Manager</span>
                 </Link>
-                <SidebarTrigger />
+                <SidebarTrigger className="md:hidden" />
              </div>
              {loading ? (
                 <div className="space-y-2 p-2 group-data-[collapsible=icon]:hidden">
@@ -191,7 +191,12 @@ export default function AppLayout({
             )}
           </SidebarFooter>
         </Sidebar>
-        <SidebarInset className="flex-1 flex flex-col">{children}</SidebarInset>
+        <SidebarInset className="flex-1 flex flex-col">
+            <header className="p-4 border-b md:hidden">
+                <SidebarTrigger />
+            </header>
+            {children}
+        </SidebarInset>
     </SidebarProvider>
   );
 }
