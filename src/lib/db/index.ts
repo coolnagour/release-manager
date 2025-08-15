@@ -15,6 +15,8 @@ export interface DataService {
 
   createRelease(appId: string, releaseData: Omit<Release, "id" | "createdAt" | "applicationId">): Promise<Release>;
   getReleasesForApp(appId: string): Promise<Release[]>;
+  updateRelease(appId: string, releaseId: string, updates: Partial<Omit<Release, "id" | "createdAt" | "applicationId">>): Promise<Release>;
+  deleteRelease(appId: string, releaseId: string): Promise<void>;
 }
 
 // For now, we are hardcoding the Firestore implementation.

@@ -170,4 +170,19 @@ export class FirestoreDataService implements DataService {
           .get();
       return snapshot.docs.map(this.toRelease);
   }
+
+    async updateRelease(appId: string, releaseId: string, updates: Partial<Omit<Release, "id" | "createdAt" | "applicationId">>): Promise<Release> {
+        const releaseRef = appsCollection.doc(appId).collection("releases").doc(releaseId);
+        await releaseRef.update(updates);
+        const updatedDoc = await releaseRef.get();
+        if (!updatedDoc.exists) {
+            throw new Error("Failed to update release: Release not found.");
+        }
+        return this.toRelease(updatedDoc);
+    }
+
+    async deleteRelease(appId: string, releaseId: string): Promise<void> {
+        const releaseRef = appsCollection.doc(appId).collection("releases").doc(releaseId);
+        await releaseRef.delete();
+    }
 }

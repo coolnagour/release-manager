@@ -4,22 +4,18 @@
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Release } from "@/types/release";
-import { getReleasesForApp, createRelease } from "@/actions/release-actions";
+import { getReleasesForApp, deleteRelease } from "@/actions/release-actions";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PlusCircle } from "lucide-react";
+import { MoreHorizontal, PlusCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -30,21 +26,44 @@ import { Role } from "@/types/roles";
 import {
   Table,
   TableBody,
-  TableCaption,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { EditReleaseForm } from "@/components/edit-release-form";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import { useToast } from "@/hooks/use-toast";
 
 
 function ReleasesPage() {
   const params = useParams();
   const { userProfile } = useAuth();
+  const { toast } = useToast();
   const [releases, setReleases] = useState<Release[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [selectedRelease, setSelectedRelease] = useState<Release | null>(null);
 
   const appId = Array.isArray(params.appId) ? params.appId[0] : params.appId;
 
@@ -63,8 +82,36 @@ function ReleasesPage() {
   }, [appId]);
 
   const handleReleaseCreated = (newRelease: Release) => {
-    setReleases([newRelease, ...releases]);
-    setIsDialogOpen(false);
+    setReleases([newRelease, ...releases].sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+    setIsCreateDialogOpen(false);
+  }
+
+  const handleReleaseUpdated = (updatedRelease: Release) => {
+    setReleases(releases.map(r => r.id === updatedRelease.id ? updatedRelease : r));
+    setIsEditDialogOpen(false);
+    setSelectedRelease(null);
+  }
+
+  const handleEditClick = (release: Release) => {
+    setSelectedRelease(release);
+    setIsEditDialogOpen(true);
+  }
+
+  const handleDeleteClick = async (releaseId: string) => {
+    const result = await deleteRelease(appId, releaseId);
+    if(result.success) {
+      setReleases(releases.filter(r => r.id !== releaseId));
+      toast({
+        title: "Release Deleted",
+        description: "The release has been successfully deleted.",
+      })
+    } else {
+      toast({
+        title: "Error Deleting Release",
+        description: result.error,
+        variant: "destructive",
+      })
+    }
   }
 
   const getBadgeVariant = (status: string) => {
@@ -83,7 +130,7 @@ function ReleasesPage() {
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8">
+    <div className="p-4 sm:p-6 lg:p-8 flex flex-col flex-1">
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight font-headline">
@@ -94,7 +141,7 @@ function ReleasesPage() {
           </p>
         </div>
         {canCreateRelease && (
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
               <Button style={{ backgroundColor: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))" }}>
                 <PlusCircle className="mr-2 h-4 w-4" />
@@ -114,7 +161,7 @@ function ReleasesPage() {
         )}
       </div>
 
-      <Card>
+      <Card className="flex-1">
         <CardContent className="pt-6">
           {loading ? (
             <div className="space-y-4">
@@ -130,6 +177,7 @@ function ReleasesPage() {
                   <TableHead>Version Code</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Created At</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -142,11 +190,47 @@ function ReleasesPage() {
                         <Badge variant={getBadgeVariant(release.status)} className="capitalize">{release.status}</Badge>
                       </TableCell>
                       <TableCell>{new Date(release.createdAt).toLocaleString()}</TableCell>
+                       <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <span className="sr-only">Open menu</span>
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem onClick={() => handleEditClick(release)}>
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                             <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                    Delete
+                                  </DropdownMenuItem>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                    This action cannot be undone. This will permanently delete this release.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDeleteClick(release.id)}>Continue</AlertDialogAction>
+                                </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center">No releases found.</TableCell>
+                    <TableCell colSpan={5} className="text-center">No releases found.</TableCell>
                   </TableRow>
                 )}
               </TableBody>
@@ -154,6 +238,24 @@ function ReleasesPage() {
           )}
         </CardContent>
       </Card>
+      
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+                <DialogTitle>Edit Release</DialogTitle>
+                <DialogDescription>
+                    Update the details for your release.
+                </DialogDescription>
+            </DialogHeader>
+            {selectedRelease && (
+                <EditReleaseForm
+                    appId={appId}
+                    release={selectedRelease}
+                    onReleaseUpdated={handleReleaseUpdated}
+                />
+            )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

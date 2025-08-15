@@ -46,3 +46,31 @@ export async function createRelease(appId: string, values: z.infer<typeof formSc
 export async function getReleasesForApp(appId: string): Promise<Release[]> {
     return await db.getReleasesForApp(appId);
 }
+
+export async function updateRelease(appId: string, releaseId: string, values: z.infer<typeof formSchema>): Promise<{ data?: Release, error?: string }> {
+    const validatedFields = formSchema.safeParse(values);
+
+    if (!validatedFields.success) {
+        return { error: "Invalid fields!" };
+    }
+
+    try {
+        const updatedRelease = await db.updateRelease(appId, releaseId, validatedFields.data);
+        revalidatePath(`/app/${appId}/releases`);
+        return { data: updatedRelease };
+    } catch (error) {
+        console.error("Failed to update release:", error);
+        return { error: "Failed to update release." };
+    }
+}
+
+export async function deleteRelease(appId: string, releaseId: string): Promise<{ success?: boolean, error?: string }> {
+    try {
+        await db.deleteRelease(appId, releaseId);
+        revalidatePath(`/app/${appId}/releases`);
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to delete release:", error);
+        return { error: "Failed to delete release." };
+    }
+}
