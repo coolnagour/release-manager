@@ -43,8 +43,8 @@ export async function createRelease(appId: string, values: z.infer<typeof formSc
   }
 }
 
-export async function getReleasesForApp(appId: string): Promise<Release[]> {
-    return await db.getReleasesForApp(appId);
+export async function getReleasesForApp(appId: string, page: number, limit: number): Promise<{ releases: Release[], total: number }> {
+    return await db.getReleasesForApp(appId, page, limit);
 }
 
 export async function updateRelease(appId: string, releaseId: string, values: z.infer<typeof formSchema>): Promise<{ data?: Release, error?: string }> {

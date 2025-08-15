@@ -7,7 +7,7 @@ import {
   CardFooter,
 } from "@/components/ui/card";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { Release } from "@/types/release";
 import { getReleasesForApp, deleteRelease } from "@/actions/release-actions";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -63,7 +63,9 @@ function ReleasesPage() {
   const { userProfile } = useAuth();
   const { toast } = useToast();
   const [releases, setReleases] = useState<Release[]>([]);
+  const [totalReleases, setTotalReleases] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [isPending, startTransition] = useTransition();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedRelease, setSelectedRelease] = useState<Release | null>(null);
@@ -75,18 +77,42 @@ function ReleasesPage() {
 
   useEffect(() => {
     if (appId) {
-      getReleasesForApp(appId)
-        .then((data) => {
-          setReleases(data);
-        })
-        .finally(() => {
-          setLoading(false);
-        });
+      setLoading(true);
+      startTransition(() => {
+        getReleasesForApp(appId, currentPage, RELEASES_PER_PAGE)
+          .then((data) => {
+            setReleases(data.releases);
+            setTotalReleases(data.total);
+          })
+          .finally(() => {
+            setLoading(false);
+          });
+      })
     }
-  }, [appId]);
+  }, [appId, currentPage]);
+
+  const fetchReleases = () => {
+     if (appId) {
+      setLoading(true);
+      startTransition(() => {
+        getReleasesForApp(appId, currentPage, RELEASES_PER_PAGE)
+          .then((data) => {
+            setReleases(data.releases);
+            setTotalReleases(data.total);
+            const totalPages = Math.ceil(data.total / RELEASES_PER_PAGE);
+            if(currentPage > totalPages && totalPages > 0) {
+              setCurrentPage(totalPages);
+            }
+          })
+          .finally(() => {
+            setLoading(false);
+          });
+      })
+    }
+  }
 
   const handleReleaseCreated = (newRelease: Release) => {
-    setReleases([newRelease, ...releases].sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+    fetchReleases();
     setIsCreateDialogOpen(false);
   }
 
@@ -104,13 +130,7 @@ function ReleasesPage() {
   const handleDeleteClick = async (releaseId: string) => {
     const result = await deleteRelease(appId, releaseId);
     if(result.success) {
-      const newReleases = releases.filter(r => r.id !== releaseId);
-      setReleases(newReleases);
-       // Adjust current page if the last item on the page was deleted
-      const totalPages = Math.ceil(newReleases.length / RELEASES_PER_PAGE);
-      if (currentPage > totalPages && totalPages > 0) {
-        setCurrentPage(totalPages);
-      }
+      fetchReleases();
       toast({
         title: "Release Deleted",
         description: "The release has been successfully deleted.",
@@ -139,11 +159,7 @@ function ReleasesPage() {
     }
   }
 
-  const totalPages = Math.ceil(releases.length / RELEASES_PER_PAGE);
-  const paginatedReleases = releases.slice(
-    (currentPage - 1) * RELEASES_PER_PAGE,
-    currentPage * RELEASES_PER_PAGE
-  );
+  const totalPages = Math.ceil(totalReleases / RELEASES_PER_PAGE);
 
 
   return (
@@ -198,8 +214,8 @@ function ReleasesPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedReleases.length > 0 ? (
-                  paginatedReleases.map((release) => (
+                {releases.length > 0 ? (
+                  releases.map((release) => (
                     <TableRow key={release.id}>
                       <TableCell className="font-medium">{release.versionName}</TableCell>
                       <TableCell>{release.versionCode}</TableCell>
@@ -263,14 +279,14 @@ function ReleasesPage() {
                     <Button
                         variant="outline"
                         onClick={() => setCurrentPage(currentPage - 1)}
-                        disabled={currentPage === 1}
+                        disabled={currentPage === 1 || isPending}
                     >
                         Previous
                     </Button>
                     <Button
                         variant="outline"
                         onClick={() => setCurrentPage(currentPage + 1)}
-                        disabled={currentPage === totalPages}
+                        disabled={currentPage === totalPages || isPending}
                     >
                         Next
                     </Button>
