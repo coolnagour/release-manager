@@ -155,90 +155,92 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        <FormField
-          control={form.control}
-          name="appName"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>App Name</FormLabel>
-              <FormControl>
-                <Input placeholder="My Awesome App" {...field} disabled={isPending || (isEditMode && !canEditAppName)} />
-              </FormControl>
-              <FormDescription>
-                This is the public display name of your application.
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="packageName"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Package Name</FormLabel>
-              <FormControl>
-                <Input placeholder="com.example.app" {...field} disabled={isPending || (isEditMode && !isSuperAdmin)} />
-              </FormControl>
-              <FormDescription>
-                The unique identifier for your app (e.g., Android package name or iOS bundle ID).
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        
-        <FormField
-          control={form.control}
-          name="users"
-          render={() => (
-            <FormItem>
-                <FormLabel>Users</FormLabel>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 flex flex-col flex-1">
+        <div className="flex-1">
+            <FormField
+            control={form.control}
+            name="appName"
+            render={({ field }) => (
+                <FormItem>
+                <FormLabel>App Name</FormLabel>
+                <FormControl>
+                    <Input placeholder="My Awesome App" {...field} disabled={isPending || (isEditMode && !canEditAppName)} />
+                </FormControl>
                 <FormDescription>
-                    These users can access and manage this application's releases.
+                    This is the public display name of your application.
                 </FormDescription>
-                <Card>
-                    <CardContent className="pt-6">
-                        <div className="space-y-4">
-                            {fields.map((field, index) => (
-                                <div key={field.id} className="flex items-center justify-between">
-                                    <span>{field.value}</span>
-                                    <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveUser(index)} disabled={isPending || !canEditUsers}>
-                                        <Trash className="h-4 w-4 text-destructive" />
-                                    </Button>
-                                </div>
-                            ))}
-                             {fields.length === 0 && (
-                                <p className="text-sm text-muted-foreground text-center">No users have been added yet.</p>
-                            )}
+                <FormMessage />
+                </FormItem>
+            )}
+            />
+            <FormField
+            control={form.control}
+            name="packageName"
+            render={({ field }) => (
+                <FormItem className="mt-8">
+                <FormLabel>Package Name</FormLabel>
+                <FormControl>
+                    <Input placeholder="com.example.app" {...field} disabled={isPending || (isEditMode && !isSuperAdmin)} />
+                </FormControl>
+                <FormDescription>
+                    The unique identifier for your app (e.g., Android package name or iOS bundle ID).
+                </FormDescription>
+                <FormMessage />
+                </FormItem>
+            )}
+            />
+            
+            <FormField
+            control={form.control}
+            name="users"
+            render={() => (
+                <FormItem className="mt-8">
+                    <FormLabel>Users</FormLabel>
+                    <FormDescription>
+                        These users can access and manage this application's releases.
+                    </FormDescription>
+                    <Card>
+                        <CardContent className="pt-6">
+                            <div className="space-y-4">
+                                {fields.map((field, index) => (
+                                    <div key={field.id} className="flex items-center justify-between">
+                                        <span>{field.value}</span>
+                                        <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveUser(index)} disabled={isPending || !canEditUsers}>
+                                            <Trash className="h-4 w-4 text-destructive" />
+                                        </Button>
+                                    </div>
+                                ))}
+                                {fields.length === 0 && (
+                                    <p className="text-sm text-muted-foreground text-center">No users have been added yet.</p>
+                                )}
+                            </div>
+                        </CardContent>
+                    </Card>
+                    <FormMessage />
+                </FormItem>
+            )}
+            />
+
+            {(isSuperAdmin || isAdmin) && (
+                <Card className="mt-8">
+                    <CardHeader>
+                        <CardTitle className="text-lg">Add New User</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="flex gap-2">
+                            <Input 
+                                type="email"
+                                placeholder="user@example.com"
+                                value={newUserEmail}
+                                onChange={(e) => setNewUserEmail(e.target.value)}
+                                disabled={isPending || !canEditUsers}
+                            />
+                            <Button type="button" onClick={handleAddUser} disabled={isPending || !canEditUsers}>Add User</Button>
                         </div>
                     </CardContent>
                 </Card>
-                 <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        {(isSuperAdmin || isAdmin) && (
-             <Card>
-                <CardHeader>
-                    <CardTitle className="text-lg">Add New User</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="flex gap-2">
-                        <Input 
-                            type="email"
-                            placeholder="user@example.com"
-                            value={newUserEmail}
-                            onChange={(e) => setNewUserEmail(e.target.value)}
-                            disabled={isPending || !canEditUsers}
-                        />
-                        <Button type="button" onClick={handleAddUser} disabled={isPending || !canEditUsers}>Add User</Button>
-                    </div>
-                </CardContent>
-            </Card>
-        )}
+            )}
+        </div>
 
         <div className="flex justify-end gap-2">
             <Button type="submit" style={{ backgroundColor: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))" }} disabled={isPending || (isEditMode && !canEditAppName && !canEditUsers)}>
@@ -250,4 +252,3 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
   );
 }
     
-

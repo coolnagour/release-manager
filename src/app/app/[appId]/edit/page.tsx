@@ -94,8 +94,8 @@ function EditAppPage() {
              <h1 className="text-3xl font-bold tracking-tight font-headline">Application Settings</h1>
              <p className="text-muted-foreground">Update the details for {app.name}.</p>
           </div>
-          <Card className="w-full shadow-lg flex-1">
-            <CardContent className="pt-6 h-full">
+          <Card className="w-full shadow-lg flex-1 flex flex-col">
+            <CardContent className="pt-6 h-full flex-1 flex flex-col">
               <CreateAppForm application={app} />
             </CardContent>
           </Card>
