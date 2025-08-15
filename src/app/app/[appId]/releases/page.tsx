@@ -4,6 +4,7 @@
 import {
   Card,
   CardContent,
+  CardFooter,
 } from "@/components/ui/card";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -55,6 +56,8 @@ import {
 import { useToast } from "@/hooks/use-toast";
 
 
+const RELEASES_PER_PAGE = 10;
+
 function ReleasesPage() {
   const params = useParams();
   const { userProfile } = useAuth();
@@ -64,6 +67,7 @@ function ReleasesPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedRelease, setSelectedRelease] = useState<Release | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const appId = Array.isArray(params.appId) ? params.appId[0] : params.appId;
 
@@ -100,7 +104,13 @@ function ReleasesPage() {
   const handleDeleteClick = async (releaseId: string) => {
     const result = await deleteRelease(appId, releaseId);
     if(result.success) {
-      setReleases(releases.filter(r => r.id !== releaseId));
+      const newReleases = releases.filter(r => r.id !== releaseId);
+      setReleases(newReleases);
+       // Adjust current page if the last item on the page was deleted
+      const totalPages = Math.ceil(newReleases.length / RELEASES_PER_PAGE);
+      if (currentPage > totalPages && totalPages > 0) {
+        setCurrentPage(totalPages);
+      }
       toast({
         title: "Release Deleted",
         description: "The release has been successfully deleted.",
@@ -128,6 +138,13 @@ function ReleasesPage() {
             return 'secondary';
     }
   }
+
+  const totalPages = Math.ceil(releases.length / RELEASES_PER_PAGE);
+  const paginatedReleases = releases.slice(
+    (currentPage - 1) * RELEASES_PER_PAGE,
+    currentPage * RELEASES_PER_PAGE
+  );
+
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 flex flex-col flex-1">
@@ -161,8 +178,8 @@ function ReleasesPage() {
         )}
       </div>
 
-      <Card className="flex-1">
-        <CardContent className="pt-6">
+      <Card className="flex-1 flex flex-col">
+        <CardContent className="pt-6 flex-1">
           {loading ? (
             <div className="space-y-4">
               <Skeleton className="h-10 w-full" />
@@ -181,8 +198,8 @@ function ReleasesPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {releases.length > 0 ? (
-                  releases.map((release) => (
+                {paginatedReleases.length > 0 ? (
+                  paginatedReleases.map((release) => (
                     <TableRow key={release.id}>
                       <TableCell className="font-medium">{release.versionName}</TableCell>
                       <TableCell>{release.versionCode}</TableCell>
@@ -237,6 +254,29 @@ function ReleasesPage() {
             </Table>
           )}
         </CardContent>
+         {totalPages > 1 && (
+            <CardFooter className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">
+                    Page {currentPage} of {totalPages}
+                </span>
+                <div className="flex gap-2">
+                    <Button
+                        variant="outline"
+                        onClick={() => setCurrentPage(currentPage - 1)}
+                        disabled={currentPage === 1}
+                    >
+                        Previous
+                    </Button>
+                    <Button
+                        variant="outline"
+                        onClick={() => setCurrentPage(currentPage + 1)}
+                        disabled={currentPage === totalPages}
+                    >
+                        Next
+                    </Button>
+                </div>
+            </CardFooter>
+        )}
       </Card>
       
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
