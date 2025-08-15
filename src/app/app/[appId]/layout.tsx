@@ -192,8 +192,13 @@ export default function AppLayout({
           </SidebarFooter>
         </Sidebar>
         <SidebarInset className="flex-1 flex flex-col">
-            <header className="p-4 border-b md:hidden">
+            <header className="p-4 border-b md:hidden flex items-center gap-4">
                 <SidebarTrigger />
+                {loading ? (
+                  <Skeleton className="h-6 w-32" />
+                ) : app ? (
+                  <span className="font-semibold">{app.name}</span>
+                ) : null}
             </header>
             {children}
         </SidebarInset>
