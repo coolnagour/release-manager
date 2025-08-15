@@ -9,7 +9,7 @@ import {
 import { useParams } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { Release } from "@/types/release";
-import { getReleasesForApp, deleteRelease } from "@/actions/release-actions";
+import { getReleasesForApp, deleteRelease, getInternalTrackVersionCodes } from "@/actions/release-actions";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MoreHorizontal, PlusCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -54,6 +54,10 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast";
+import { getApp } from "@/actions/app-actions";
+import { Application } from "@/types/application";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Terminal } from "lucide-react";
 
 
 const RELEASES_PER_PAGE = 10;
@@ -70,6 +74,9 @@ function ReleasesPage() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedRelease, setSelectedRelease] = useState<Release | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [app, setApp] = useState<Application | null>(null);
+  const [internalTrackVCs, setInternalTrackVCs] = useState<(string|number)[]>([]);
+  const [googlePlayError, setGooglePlayError] = useState<string | null>(null);
 
   const appId = Array.isArray(params.appId) ? params.appId[0] : params.appId;
 
@@ -78,6 +85,19 @@ function ReleasesPage() {
   useEffect(() => {
     if (appId) {
       setLoading(true);
+      getApp(appId).then(appData => {
+        setApp(appData);
+        if (appData?.packageName) {
+            getInternalTrackVersionCodes(appData.packageName).then(result => {
+                if (result.data) {
+                    setInternalTrackVCs(result.data);
+                }
+                if (result.error) {
+                    setGooglePlayError(result.error);
+                }
+            })
+        }
+      });
       startTransition(() => {
         getReleasesForApp(appId, currentPage, RELEASES_PER_PAGE)
           .then((data) => {
@@ -193,6 +213,25 @@ function ReleasesPage() {
           </Dialog>
         )}
       </div>
+      
+      {googlePlayError ? (
+         <Alert variant="destructive" className="mb-4">
+            <Terminal className="h-4 w-4" />
+            <AlertTitle>Google Play API Error</AlertTitle>
+            <AlertDescription>
+                {googlePlayError}
+            </AlertDescription>
+        </Alert>
+      ) : internalTrackVCs.length > 0 ? (
+        <Alert className="mb-4">
+            <Terminal className="h-4 w-4" />
+            <AlertTitle>Google Play Internal Track</AlertTitle>
+            <AlertDescription>
+                The following version codes are active in the internal track: {internalTrackVCs.join(', ')}
+            </AlertDescription>
+        </Alert>
+      ) : null}
+
 
       <Card className="flex-1 flex flex-col">
         <CardContent className="pt-6 flex-1">

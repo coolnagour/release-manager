@@ -5,6 +5,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { Release, ReleaseStatus } from "@/types/release";
+import { getInternalTrack } from "@/lib/google-play";
 
 const formSchema = z.object({
   versionName: z.string().min(1, {
@@ -73,4 +74,19 @@ export async function deleteRelease(appId: string, releaseId: string): Promise<{
         console.error("Failed to delete release:", error);
         return { error: "Failed to delete release." };
     }
+}
+
+export async function getInternalTrackVersionCodes(packageName: string): Promise<{ data?: (number | string)[], error?: string }> {
+    const result = await getInternalTrack(packageName);
+    if (result.error) {
+        return { error: result.error };
+    }
+    
+    const versionCodes = result.data?.releases
+        ?.flatMap(r => r.versionCodes || [])
+        .filter((vc): vc is string => !!vc) // Ensure version codes are strings
+        .map(vc => parseInt(vc, 10))
+        .filter((vc): vc is number => !isNaN(vc));
+
+    return { data: versionCodes || [] };
 }
