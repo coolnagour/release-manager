@@ -17,7 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { createRelease } from "@/actions/release-actions";
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { Release, ReleaseStatus } from "@/types/release";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 
@@ -34,9 +34,10 @@ const formSchema = z.object({
 interface CreateReleaseFormProps {
     appId: string;
     onReleaseCreated: (newRelease: Release) => void;
+    initialVersionCode?: string;
 }
 
-export function CreateReleaseForm({ appId, onReleaseCreated }: CreateReleaseFormProps) {
+export function CreateReleaseForm({ appId, onReleaseCreated, initialVersionCode }: CreateReleaseFormProps) {
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
 
@@ -44,10 +45,17 @@ export function CreateReleaseForm({ appId, onReleaseCreated }: CreateReleaseForm
     resolver: zodResolver(formSchema),
     defaultValues: {
       versionName: "",
-      versionCode: "",
+      versionCode: initialVersionCode || "",
       status: ReleaseStatus.ACTIVE,
     },
   });
+
+  useEffect(() => {
+    if (initialVersionCode) {
+      form.setValue("versionCode", initialVersionCode);
+    }
+  }, [initialVersionCode, form]);
+
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     startTransition(async () => {

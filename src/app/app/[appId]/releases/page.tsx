@@ -75,8 +75,9 @@ function ReleasesPage() {
   const [selectedRelease, setSelectedRelease] = useState<Release | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [app, setApp] = useState<Application | null>(null);
-  const [internalTrackVCs, setInternalTrackVCs] = useState<(string|number)[]>([]);
+  const [untrackedVCs, setUntrackedVCs] = useState<(string|number)[]>([]);
   const [googlePlayError, setGooglePlayError] = useState<string | null>(null);
+  const [versionCodeToCreate, setVersionCodeToCreate] = useState<string | undefined>();
 
   const appId = Array.isArray(params.appId) ? params.appId[0] : params.appId;
 
@@ -85,29 +86,36 @@ function ReleasesPage() {
   useEffect(() => {
     if (appId) {
       setLoading(true);
-      getApp(appId).then(appData => {
+      
+      const appPromise = getApp(appId).then(appData => {
         setApp(appData);
         if (appData?.packageName) {
-            getInternalTrackVersionCodes(appData.packageName).then(result => {
-                if (result.data) {
-                    setInternalTrackVCs(result.data);
-                }
-                if (result.error) {
-                    setGooglePlayError(result.error);
-                }
-            })
+            return getInternalTrackVersionCodes(appData.packageName);
         }
+        return Promise.resolve({ data: [] });
       });
-      startTransition(() => {
-        getReleasesForApp(appId, currentPage, RELEASES_PER_PAGE)
-          .then((data) => {
-            setReleases(data.releases);
-            setTotalReleases(data.total);
-          })
-          .finally(() => {
-            setLoading(false);
-          });
-      })
+
+      const releasesPromise = getReleasesForApp(appId, currentPage, RELEASES_PER_PAGE);
+
+      Promise.all([appPromise, releasesPromise]).then(([playResult, releasesData]) => {
+        setReleases(releasesData.releases);
+        setTotalReleases(releasesData.total);
+
+        if (playResult.error) {
+            setGooglePlayError(playResult.error);
+        } else if (playResult.data) {
+            const playStoreVCs = playResult.data;
+            const existingVCs = new Set(releasesData.releases.map(r => parseInt(r.versionCode, 10)));
+            const untracked = playStoreVCs.filter(vc => !existingVCs.has(Number(vc)));
+            setUntrackedVCs(untracked);
+        }
+        
+      }).catch(err => {
+        console.error("Failed to fetch data", err);
+        setGooglePlayError("Failed to load release or Google Play data.");
+      }).finally(() => {
+        setLoading(false);
+      });
     }
   }, [appId, currentPage]);
 
@@ -123,6 +131,10 @@ function ReleasesPage() {
             if(currentPage > totalPages && totalPages > 0) {
               setCurrentPage(totalPages);
             }
+             // Re-calculate untracked VCs
+            const existingVCs = new Set(data.releases.map(r => parseInt(r.versionCode, 10)));
+            setUntrackedVCs(prev => prev.filter(vc => !existingVCs.has(Number(vc))));
+
           })
           .finally(() => {
             setLoading(false);
@@ -134,6 +146,7 @@ function ReleasesPage() {
   const handleReleaseCreated = (newRelease: Release) => {
     fetchReleases();
     setIsCreateDialogOpen(false);
+    setVersionCodeToCreate(undefined);
   }
 
   const handleReleaseUpdated = (updatedRelease: Release) => {
@@ -163,6 +176,12 @@ function ReleasesPage() {
       })
     }
   }
+  
+  const handleCreateFromVC = (vc: string | number) => {
+    setVersionCodeToCreate(String(vc));
+    setIsCreateDialogOpen(true);
+  }
+
 
   const getBadgeVariant = (status: string) => {
     switch (status) {
@@ -194,7 +213,12 @@ function ReleasesPage() {
           </p>
         </div>
         {canCreateRelease && (
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+          <Dialog open={isCreateDialogOpen} onOpenChange={(open) => {
+                setIsCreateDialogOpen(open);
+                if (!open) {
+                    setVersionCodeToCreate(undefined);
+                }
+            }}>
             <DialogTrigger asChild>
               <Button style={{ backgroundColor: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))" }}>
                 <PlusCircle className="mr-2 h-4 w-4" />
@@ -208,7 +232,7 @@ function ReleasesPage() {
                   Enter the details for your new release.
                 </DialogDescription>
               </DialogHeader>
-              <CreateReleaseForm appId={appId} onReleaseCreated={handleReleaseCreated} />
+              <CreateReleaseForm appId={appId} onReleaseCreated={handleReleaseCreated} initialVersionCode={versionCodeToCreate} />
             </DialogContent>
           </Dialog>
         )}
@@ -222,12 +246,19 @@ function ReleasesPage() {
                 {googlePlayError}
             </AlertDescription>
         </Alert>
-      ) : internalTrackVCs.length > 0 ? (
+      ) : untrackedVCs.length > 0 ? (
         <Alert className="mb-4">
             <Terminal className="h-4 w-4" />
-            <AlertTitle>Google Play Internal Track</AlertTitle>
+            <AlertTitle>Untracked Releases from Google Play</AlertTitle>
             <AlertDescription>
-                The following version codes are active in the internal track: {internalTrackVCs.join(', ')}
+                The following version codes from the internal track are not in the release manager. Click to add them.
+                 <div className="flex flex-wrap gap-2 mt-2">
+                    {untrackedVCs.map(vc => (
+                        <Button key={vc} variant="outline" size="sm" onClick={() => handleCreateFromVC(vc)}>
+                            {vc}
+                        </Button>
+                    ))}
+                </div>
             </AlertDescription>
         </Alert>
       ) : null}
