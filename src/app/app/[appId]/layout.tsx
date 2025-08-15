@@ -66,8 +66,7 @@ export default function AppLayout({
   const canEdit = userProfile?.role === Role.SUPERADMIN || userProfile?.role === Role.ADMIN;
 
   return (
-    <SidebarProvider>
-      <div className="flex flex-col md:flex-row min-h-screen">
+    <SidebarProvider className="min-h-screen">
         <Sidebar>
           <SidebarHeader className="p-2 flex flex-col gap-2">
              <div className="flex justify-between items-center">
@@ -193,7 +192,6 @@ export default function AppLayout({
           </SidebarFooter>
         </Sidebar>
         <SidebarInset className="flex-1 flex flex-col">{children}</SidebarInset>
-      </div>
     </SidebarProvider>
   );
 }
