@@ -23,7 +23,7 @@ import { UserProfile } from "@/types/user-profile";
 import { findOrCreateUser } from "@/actions/app-actions";
 import { Role } from "@/types/roles";
 
-const USE_MOCK_AUTH = process.env.NEXT_PUBLIC_USE_MOCK_AUTH === "true";
+const MOCK_AUTH_EMAIL = process.env.NEXT_PUBLIC_USE_MOCK_AUTH;
 
 interface AuthContextType {
   user: User | null;
@@ -35,10 +35,10 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const mockUser: User = {
-  uid: "mock-user-id",
-  email: "mock.user@example.com",
-  displayName: "Mock User",
+const createMockUser = (email: string): User => ({
+  uid: `mock-user-id-${email}`,
+  email: email,
+  displayName: `Mock User (${email.split('@')[0]})`,
   photoURL: "https://placehold.co/100x100.png",
   providerId: "mock",
   emailVerified: true,
@@ -60,16 +60,17 @@ const mockUser: User = {
   }),
   reload: async () => {},
   toJSON: () => ({}),
-};
+});
 
-const mockUserProfile: UserProfile = {
-  uid: "mock-user-id",
-  email: "mock.user@example.com",
-  displayName: "Mock User",
-  photoURL: "https://placehold.co/100x100.png",
-  role: Role.SUPERADMIN,
-  createdAt: new Date(),
-}
+const createMockUserProfile = (email: string): UserProfile => ({
+    uid: `mock-user-id-${email}`,
+    email: email,
+    displayName: `Mock User (${email.split('@')[0]})`,
+    photoURL: "https://placehold.co/100x100.png",
+    role: Role.SUPERADMIN,
+    createdAt: new Date(),
+});
+
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -77,7 +78,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (USE_MOCK_AUTH) {
+    if (MOCK_AUTH_EMAIL) {
+      const mockUser = createMockUser(MOCK_AUTH_EMAIL);
+      const mockUserProfile = createMockUserProfile(MOCK_AUTH_EMAIL);
       setUser(mockUser);
       setUserProfile(mockUserProfile);
       setLoading(false);
@@ -104,9 +107,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signInWithGoogle = async () => {
-    if (USE_MOCK_AUTH) {
-      setUser(mockUser);
-      setUserProfile(mockUserProfile);
+    if (MOCK_AUTH_EMAIL) {
+      setUser(createMockUser(MOCK_AUTH_EMAIL));
+      setUserProfile(createMockUserProfile(MOCK_AUTH_EMAIL));
       return
     };
     const provider = new GoogleAuthProvider();
@@ -114,7 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
-    if (USE_MOCK_AUTH) {
+    if (MOCK_AUTH_EMAIL) {
       setUser(null);
       setUserProfile(null);
       return;
