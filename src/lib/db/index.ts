@@ -30,7 +30,6 @@ export interface DataService {
 
 function initializeDb(): DataService {
     if (process.env.TURSO_DATABASE_URL && process.env.TURSO_AUTH_TOKEN) {
-        console.log("Using Drizzle with Turso database");
         return new DrizzleDataService();
     }
     
