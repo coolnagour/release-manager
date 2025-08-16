@@ -131,6 +131,7 @@ export function MultiSelect({
                         e.stopPropagation();
                       }}
                       onSelect={() => handleSelect(option.value)}
+                      onClick={() => handleSelect(option.value)}
                       className={"cursor-pointer"}
                     >
                       {option.label}
