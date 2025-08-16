@@ -40,7 +40,7 @@ const countryOptions = countries.map(country => ({
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters."),
   rules: z.object({
-      country: z.array(z.string()),
+      countries: z.array(z.string()),
       companyId: z.array(z.number()),
       driverId: z.array(z.string()),
       vehicleId: z.array(z.string()),
@@ -61,7 +61,7 @@ export function ConditionForm({ appId, onConditionSubmitted, condition }: Condit
     defaultValues: {
       name: condition?.name || "",
       rules: {
-        country: condition?.rules.country || [],
+        countries: condition?.rules.countries || [],
         companyId: condition?.rules.companyId || [],
         driverId: condition?.rules.driverId || [],
         vehicleId: condition?.rules.vehicleId || [],
@@ -134,10 +134,10 @@ export function ConditionForm({ appId, onConditionSubmitted, condition }: Condit
             <CardContent className="space-y-4 pt-6">
                  <FormField
                     control={form.control}
-                    name="rules.country"
+                    name="rules.countries"
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel>Country</FormLabel>
+                            <FormLabel>Countries</FormLabel>
                             <FormControl>
                                <MultiSelect
                                     options={countryOptions}

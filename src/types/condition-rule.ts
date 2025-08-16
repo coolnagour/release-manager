@@ -2,7 +2,7 @@
 import { z } from 'zod';
 
 export const conditionRuleSchema = z.object({
-    country: z.array(z.string()).default([]),
+    countries: z.array(z.string()).default([]),
     companyId: z.array(z.number().int()).default([]),
     driverId: z.array(z.string()).default([]),
     vehicleId: z.array(z.string()).default([]),
