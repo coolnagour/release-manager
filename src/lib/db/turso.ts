@@ -1,6 +1,4 @@
 
-import "server-only";
-
 import { createClient, Client } from "@libsql/client";
 import { DataService } from ".";
 import { Application } from "@/types/application";
@@ -89,12 +87,19 @@ export class TursoDataService implements DataService {
   async updateApp(id: string, updates: Partial<Omit<Application, "id" | "ownerId" | "createdAt">>): Promise<Application> {
     const tx = await this.client.transaction("write");
     try {
+        const currentAppResult = await tx.execute({ sql: "SELECT * FROM applications WHERE id = ?", args: [id] });
+        if (currentAppResult.rows.length === 0) {
+            throw new Error("App not found for update");
+        }
+        const currentApp = await this.rowToApplication(currentAppResult.rows[0]);
+
+        const newName = updates.name ?? currentApp.name;
+        const newPackageName = updates.packageName ?? currentApp.packageName;
+
         if (updates.name !== undefined || updates.packageName !== undefined) {
-             const currentApp = await this.getApp(id);
-             if (!currentApp) throw new Error("App not found for update");
             await tx.execute({
                 sql: "UPDATE applications SET name = ?, package_name = ? WHERE id = ?",
-                args: [updates.name ?? currentApp.name, updates.packageName ?? currentApp.packageName, id]
+                args: [newName, newPackageName, id]
             });
         }
 
