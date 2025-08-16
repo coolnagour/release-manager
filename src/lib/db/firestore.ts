@@ -72,10 +72,16 @@ export class FirestoreDataService implements DataService {
 
   private toCondition(doc: FirebaseFirestore.DocumentSnapshot): Condition {
     const data = doc.data()!;
+    const rules = data.rules || {};
     return {
         id: doc.id,
         name: data.name,
-        rules: data.rules,
+        rules: {
+            countries: rules.countries || [],
+            companyIds: rules.companyIds || [],
+            driverIds: rules.driverIds || [],
+            vehicleIds: rules.vehicleIds || [],
+        },
         applicationId: data.applicationId,
         createdAt: (data.createdAt as Timestamp).toDate(),
     };

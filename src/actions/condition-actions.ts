@@ -41,7 +41,8 @@ export async function updateCondition(appId: string, conditionId: string, values
     const validatedFields = conditionSchema.safeParse(values);
 
     if (!validatedFields.success) {
-        return { error: "Invalid fields!" };
+        const errorMessage = validatedFields.error.errors.map(e => e.message).join(", ");
+        return { error: `Invalid fields: ${errorMessage}` };
     }
 
     try {

@@ -27,7 +27,7 @@ import { TagInput } from "./ui/tag-input";
 
 interface ConditionFormProps {
     appId: string;
-    onConditionSubmitted?: () => void; // Optional now
+    onConditionSubmitted?: () => void;
     condition?: Condition | null;
 }
 
@@ -36,15 +36,17 @@ const countryOptions = countries.map(country => ({
     label: country.name,
 }));
 
-// We keep the backend schema as is, but create a new form schema for the frontend
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters."),
   rules: z.object({
       countries: z.array(z.string()),
-      companyId: z.array(z.number()),
-      driverId: z.array(z.string()),
-      vehicleId: z.array(z.string()),
+      companyIds: z.array(z.number()),
+      driverIds: z.array(z.string()),
+      vehicleIds: z.array(z.string()),
   })
+}).refine(data => !(data.rules.driverIds.length > 0 && data.rules.vehicleIds.length > 0), {
+    message: "Driver IDs and Vehicle IDs cannot be used at the same time.",
+    path: ["rules.driverIds"],
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -62,21 +64,25 @@ export function ConditionForm({ appId, onConditionSubmitted, condition }: Condit
       name: condition?.name || "",
       rules: {
         countries: condition?.rules.countries || [],
-        companyId: condition?.rules.companyId || [],
-        driverId: condition?.rules.driverId || [],
-        vehicleId: condition?.rules.vehicleId || [],
+        companyIds: condition?.rules.companyIds || [],
+        driverIds: condition?.rules.driverIds || [],
+        vehicleIds: condition?.rules.vehicleIds || [],
       },
     },
   });
+
+  const { watch } = form;
+  const driverIds = watch("rules.driverIds");
+  const vehicleIds = watch("rules.vehicleIds");
   
   function onSubmit(values: FormValues) {
     startTransition(async () => {
-      // We use the original conditionSchema to validate before sending to backend
       const backendValidation = conditionSchema.safeParse(values);
       if (!backendValidation.success) {
+          const errorMessage = backendValidation.error.errors.map(e => e.message).join(", ");
           toast({
               title: "Validation Error",
-              description: backendValidation.error.errors.map(e => e.message).join(', '),
+              description: errorMessage,
               variant: "destructive",
           });
           return;
@@ -154,7 +160,7 @@ export function ConditionForm({ appId, onConditionSubmitted, condition }: Condit
                  />
                  <FormField
                     control={form.control}
-                    name="rules.companyId"
+                    name="rules.companyIds"
                     render={({ field }) => (
                         <FormItem>
                             <FormLabel>Company IDs</FormLabel>
@@ -174,7 +180,7 @@ export function ConditionForm({ appId, onConditionSubmitted, condition }: Condit
                  />
                  <FormField
                     control={form.control}
-                    name="rules.driverId"
+                    name="rules.driverIds"
                     render={({ field }) => (
                         <FormItem>
                             <FormLabel>Driver IDs</FormLabel>
@@ -183,17 +189,17 @@ export function ConditionForm({ appId, onConditionSubmitted, condition }: Condit
                                     value={field.value}
                                     onChange={field.onChange}
                                     placeholder="Enter a driver ID and press Enter"
-                                    disabled={isPending}
+                                    disabled={isPending || (vehicleIds && vehicleIds.length > 0)}
                                 />
                             </FormControl>
-                            <FormDescription>List of driver IDs.</FormDescription>
+                            <FormDescription>List of driver IDs. Cannot be used with Vehicle IDs.</FormDescription>
                             <FormMessage />
                         </FormItem>
                     )}
                  />
                  <FormField
                     control={form.control}
-                    name="rules.vehicleId"
+                    name="rules.vehicleIds"
                     render={({ field }) => (
                         <FormItem>
                             <FormLabel>Vehicle IDs</FormLabel>
@@ -202,10 +208,10 @@ export function ConditionForm({ appId, onConditionSubmitted, condition }: Condit
                                     value={field.value}
                                     onChange={field.onChange}
                                     placeholder="Enter a vehicle ID and press Enter"
-                                    disabled={isPending}
+                                    disabled={isPending || (driverIds && driverIds.length > 0)}
                                 />
                             </FormControl>
-                             <FormDescription>List of vehicle IDs.</FormDescription>
+                             <FormDescription>List of vehicle IDs. Cannot be used with Driver IDs.</FormDescription>
                             <FormMessage />
                         </FormItem>
                     )}
