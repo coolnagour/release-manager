@@ -3,7 +3,7 @@ import { Application } from "@/types/application";
 import { Release } from "@/types/release";
 import { UserProfile } from "@/types/user-profile";
 import { Condition } from "@/types/condition";
-import { FirestoreDataService } from "./firestore";
+import { DrizzleDataService } from "./drizzle";
 
 export interface DataService {
   createApp(appData: Omit<Application, "id" | "createdAt">): Promise<Application>;
@@ -29,8 +29,7 @@ export interface DataService {
 }
 
 function initializeDb(): DataService {
-    // For now, we will default to Firestore.
-    return new FirestoreDataService();
+    return new DrizzleDataService();
 }
 
 export const db: DataService = initializeDb();
