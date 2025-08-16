@@ -183,6 +183,14 @@ export class FirestoreDataService implements DataService {
       return this.toRelease(newReleaseDoc);
   }
 
+  async getRelease(appId: string, releaseId: string): Promise<Release | null> {
+    const doc = await appsCollection.doc(appId).collection("releases").doc(releaseId).get();
+    if (!doc.exists) {
+      return null;
+    }
+    return this.toRelease(doc);
+  }
+
   async getReleasesForApp(appId: string, page: number, limit: number): Promise<{ releases: Release[], total: number }> {
       const releasesRef = appsCollection.doc(appId).collection("releases");
       

@@ -11,21 +11,13 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Role } from "@/types/roles";
 import { Release } from "@/types/release";
-import { db } from "@/lib/db";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { Condition } from "@/types/condition";
 import { getConditionsForApp } from "@/actions/condition-actions";
-
-async function getRelease(appId: string, releaseId: string): Promise<Release | null> {
-    // This is a temporary client-side data fetching pattern.
-    // Ideally, this should be a server action or API route.
-    const releasesData = await db.getReleasesForApp(appId, 1, 1000); // Fetch all for simplicity
-    const release = releasesData.releases.find(r => r.id === releaseId);
-    return release || null;
-}
+import { getRelease } from "@/actions/release-actions";
 
 
 function EditReleasePage() {

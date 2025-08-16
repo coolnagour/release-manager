@@ -46,6 +46,10 @@ export async function createRelease(appId: string, values: z.infer<typeof formSc
   }
 }
 
+export async function getRelease(appId: string, releaseId: string): Promise<Release | null> {
+    return await db.getRelease(appId, releaseId);
+}
+
 export async function getReleasesForApp(appId: string, page: number, limit: number): Promise<{ releases: Release[], total: number }> {
     return await db.getReleasesForApp(appId, page, limit);
 }
@@ -60,6 +64,7 @@ export async function updateRelease(appId: string, releaseId: string, values: z.
     try {
         const updatedRelease = await db.updateRelease(appId, releaseId, validatedFields.data);
         revalidatePath(`/app/${appId}/releases`);
+        revalidatePath(`/app/${appId}/releases/${releaseId}/edit`);
         return { data: updatedRelease };
     } catch (error) {
         console.error("Failed to update release:", error);

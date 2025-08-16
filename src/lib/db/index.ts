@@ -15,6 +15,7 @@ export interface DataService {
   getSuperAdminsForApp(userEmails: string[]): Promise<UserProfile[]>;
 
   createRelease(appId: string, releaseData: Omit<Release, "id" | "createdAt" | "applicationId">): Promise<Release>;
+  getRelease(appId: string, releaseId: string): Promise<Release | null>;
   getReleasesForApp(appId: string, page: number, limit: number): Promise<{ releases: Release[], total: number }>;
   updateRelease(appId: string, releaseId: string, updates: Partial<Omit<Release, "id" | "createdAt" | "applicationId">>): Promise<Release>;
   deleteRelease(appId: string, releaseId: string): Promise<void>;
