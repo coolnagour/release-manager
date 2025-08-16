@@ -45,7 +45,7 @@ const formSchema = z.object({
       vehicleIds: z.array(z.string()),
   })
 }).refine(data => !(data.rules.driverIds.length > 0 && data.rules.vehicleIds.length > 0), {
-    message: "Driver IDs and Vehicle IDs cannot be used at the same time.",
+    message: "Drivers and Vehicles cannot be used at the same time.",
     path: ["rules.driverIds"],
 });
 
@@ -163,7 +163,7 @@ export function ConditionForm({ appId, onConditionSubmitted, condition }: Condit
                     name="rules.companyIds"
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel>Company IDs</FormLabel>
+                            <FormLabel>Companies</FormLabel>
                             <FormControl>
                                 <TagInput
                                     value={field.value.map(String)}
@@ -173,7 +173,7 @@ export function ConditionForm({ appId, onConditionSubmitted, condition }: Condit
                                     inputType="number"
                                 />
                             </FormControl>
-                            <FormDescription>List of integer company IDs.</FormDescription>
+                            <FormDescription>List of company IDs.</FormDescription>
                             <FormMessage />
                         </FormItem>
                     )}
@@ -183,7 +183,7 @@ export function ConditionForm({ appId, onConditionSubmitted, condition }: Condit
                     name="rules.driverIds"
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel>Driver IDs</FormLabel>
+                            <FormLabel>Drivers</FormLabel>
                             <FormControl>
                                 <TagInput
                                     value={field.value}
@@ -192,7 +192,7 @@ export function ConditionForm({ appId, onConditionSubmitted, condition }: Condit
                                     disabled={isPending || (vehicleIds && vehicleIds.length > 0)}
                                 />
                             </FormControl>
-                            <FormDescription>List of driver IDs. Cannot be used with Vehicle IDs.</FormDescription>
+                            <FormDescription>List of driver IDs. Cannot be used with Vehicles.</FormDescription>
                             <FormMessage />
                         </FormItem>
                     )}
@@ -202,7 +202,7 @@ export function ConditionForm({ appId, onConditionSubmitted, condition }: Condit
                     name="rules.vehicleIds"
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel>Vehicle IDs</FormLabel>
+                            <FormLabel>Vehicles</FormLabel>
                             <FormControl>
                                 <TagInput
                                     value={field.value}
@@ -211,7 +211,7 @@ export function ConditionForm({ appId, onConditionSubmitted, condition }: Condit
                                     disabled={isPending || (driverIds && driverIds.length > 0)}
                                 />
                             </FormControl>
-                             <FormDescription>List of vehicle IDs. Cannot be used with Driver IDs.</FormDescription>
+                             <FormDescription>List of vehicle IDs. Cannot be used with Drivers.</FormDescription>
                             <FormMessage />
                         </FormItem>
                     )}

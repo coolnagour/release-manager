@@ -95,7 +95,7 @@ function ConditionsPage() {
     
     return activeRules.map(([key, values]) => (
       <Badge key={key} variant="secondary" className="mr-1 mb-1 capitalize">
-        {key.replace(/([A-Z])/g, ' $1')}: {values.length}
+        {key.replace(/Ids/g, '')}: {values.length}
       </Badge>
     ))
   }
