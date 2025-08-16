@@ -1,5 +1,5 @@
 
-import { sql, relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import { integer, sqliteTable, text, primaryKey } from "drizzle-orm/sqlite-core";
 import { Role } from "@/types/roles";
 import { ReleaseStatus } from "@/types/release";
