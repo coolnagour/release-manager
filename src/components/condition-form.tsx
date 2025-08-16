@@ -23,6 +23,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { useRouter } from "next/navigation";
 import { MultiSelect } from "./ui/multi-select";
 import { countries } from "@/lib/countries";
+import { TagInput } from "./ui/tag-input";
 
 interface ConditionFormProps {
     appId: string;
@@ -35,36 +36,14 @@ const countryOptions = countries.map(country => ({
     label: country.name,
 }));
 
-// Custom Zod transformer to handle comma-separated strings
-const stringToArray = z.preprocess((val) => {
-    if (typeof val === 'string' && val.length > 0) {
-        return val.split(',').map(item => item.trim());
-    }
-    if (Array.isArray(val)) {
-        return val;
-    }
-    return [];
-}, z.array(z.string().min(1)));
-
-const numberStringToArray = z.preprocess((val) => {
-    if (typeof val === 'string' && val.length > 0) {
-        return val.split(',').map(item => parseInt(item.trim(), 10)).filter(item => !isNaN(item));
-    }
-     if (Array.isArray(val)) {
-        return val;
-    }
-    return [];
-}, z.array(z.number()));
-
-
-// Form schema using the transformer
+// We keep the backend schema as is, but create a new form schema for the frontend
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters."),
   rules: z.object({
       country: z.array(z.string()),
-      companyId: numberStringToArray,
-      driverId: stringToArray,
-      vehicleId: stringToArray,
+      companyId: z.array(z.number()),
+      driverId: z.array(z.string()),
+      vehicleId: z.array(z.string()),
   })
 });
 
@@ -92,7 +71,7 @@ export function ConditionForm({ appId, onConditionSubmitted, condition }: Condit
   
   function onSubmit(values: FormValues) {
     startTransition(async () => {
-      // Validate against the original backend-facing schema
+      // We use the original conditionSchema to validate before sending to backend
       const backendValidation = conditionSchema.safeParse(values);
       if (!backendValidation.success) {
           toast({
@@ -180,16 +159,15 @@ export function ConditionForm({ appId, onConditionSubmitted, condition }: Condit
                         <FormItem>
                             <FormLabel>Company IDs</FormLabel>
                             <FormControl>
-                                <Input 
-                                    type="text"
-                                    placeholder="e.g., 101,245,3000" 
-                                    {...field} 
-                                    value={Array.isArray(field.value) ? field.value.join(',') : ''}
-                                    onChange={e => field.onChange(e.target.value.split(',').map(s => s.trim()))}
-                                    disabled={isPending} 
+                                <TagInput
+                                    value={field.value.map(String)}
+                                    onChange={(tags) => field.onChange(tags.map(Number).filter(n => !isNaN(n)))}
+                                    placeholder="Enter a company ID and press Enter"
+                                    disabled={isPending}
+                                    inputType="number"
                                 />
                             </FormControl>
-                            <FormDescription>Comma-separated list of integer company IDs.</FormDescription>
+                            <FormDescription>List of integer company IDs.</FormDescription>
                             <FormMessage />
                         </FormItem>
                     )}
@@ -201,15 +179,14 @@ export function ConditionForm({ appId, onConditionSubmitted, condition }: Condit
                         <FormItem>
                             <FormLabel>Driver IDs</FormLabel>
                             <FormControl>
-                                <Input 
-                                    placeholder="e.g., driver-abc,driver-xyz" 
-                                    {...field} 
-                                    value={Array.isArray(field.value) ? field.value.join(',') : ''}
-                                    onChange={e => field.onChange(e.target.value.split(',').map(s => s.trim()))}
-                                    disabled={isPending} 
+                                <TagInput
+                                    value={field.value}
+                                    onChange={field.onChange}
+                                    placeholder="Enter a driver ID and press Enter"
+                                    disabled={isPending}
                                 />
                             </FormControl>
-                            <FormDescription>Comma-separated list of driver IDs.</FormDescription>
+                            <FormDescription>List of driver IDs.</FormDescription>
                             <FormMessage />
                         </FormItem>
                     )}
@@ -221,15 +198,14 @@ export function ConditionForm({ appId, onConditionSubmitted, condition }: Condit
                         <FormItem>
                             <FormLabel>Vehicle IDs</FormLabel>
                             <FormControl>
-                                <Input 
-                                    placeholder="e.g., vehicle-123,vehicle-456" 
-                                    {...field} 
-                                    value={Array.isArray(field.value) ? field.value.join(',') : ''}
-                                    onChange={e => field.onChange(e.target.value.split(',').map(s => s.trim()))}
-                                    disabled={isPending} 
+                                <TagInput
+                                    value={field.value}
+                                    onChange={field.onChange}
+                                    placeholder="Enter a vehicle ID and press Enter"
+                                    disabled={isPending}
                                 />
                             </FormControl>
-                             <FormDescription>Comma-separated list of vehicle IDs.</FormDescription>
+                             <FormDescription>List of vehicle IDs.</FormDescription>
                             <FormMessage />
                         </FormItem>
                     )}
