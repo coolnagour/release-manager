@@ -44,16 +44,24 @@ export class TursoDataService implements DataService {
     const id = randomUUID();
     const createdAt = new Date();
     
-    await this.client.batch([
-        {
+    const tx = await this.client.transaction("write");
+    try {
+        await tx.execute({
             sql: "INSERT INTO applications (id, name, package_name, owner_id, created_at) VALUES (?, ?, ?, ?, ?)",
             args: [id, appData.name, appData.packageName, appData.ownerId, createdAt.toISOString()]
-        },
-        ...appData.users.map(email => ({
-            sql: "INSERT INTO application_users (application_id, user_email) VALUES (?, ?)",
-            args: [id, email]
-        }))
-    ], "write");
+        });
+        
+        for (const email of appData.users) {
+            await tx.execute({
+                sql: "INSERT INTO application_users (application_id, user_email) VALUES (?, ?)",
+                args: [id, email]
+            });
+        }
+        await tx.commit();
+    } catch(e) {
+        await tx.rollback();
+        throw e;
+    }
 
     return { ...appData, id, createdAt };
   }
@@ -81,7 +89,7 @@ export class TursoDataService implements DataService {
   async updateApp(id: string, updates: Partial<Omit<Application, "id" | "ownerId" | "createdAt">>): Promise<Application> {
     const tx = await this.client.transaction("write");
     try {
-        if (updates.name && updates.packageName) {
+        if (updates.name !== undefined && updates.packageName !== undefined) {
             await tx.execute({
                 sql: "UPDATE applications SET name = ?, package_name = ? WHERE id = ?",
                 args: [updates.name, updates.packageName, id]
@@ -387,20 +395,44 @@ export class TursoDataService implements DataService {
   }
 
   async updateCondition(appId: string, conditionId: string, updates: Partial<Omit<Condition, "id" | "createdAt" | "applicationId">>): Promise<Condition> {
-      const rules = updates.rules || {};
-      await this.client.execute({
-          sql: `UPDATE conditions SET name = ?, rules_countries = ?, rules_company_ids = ?, rules_driver_ids = ?, rules_vehicle_ids = ?
-                WHERE id = ? AND application_id = ?`,
-          args: [
-            updates.name, 
-            JSON.stringify(rules.countries || []), 
-            JSON.stringify(rules.companyIds || []), 
-            JSON.stringify(rules.driverIds || []), 
-            JSON.stringify(rules.vehicleIds || []), 
-            conditionId, 
-            appId
-        ]
-      });
+      const { name, rules } = updates;
+      const tx = await this.client.transaction("write");
+      try {
+        const existing = await tx.execute({ sql: "SELECT * FROM conditions WHERE id = ? AND application_id = ?", args: [conditionId, appId]});
+        if (existing.rows.length === 0) {
+            throw new Error("Condition not found");
+        }
+
+        const finalName = name ?? existing.rows[0].name;
+        
+        // This is complex because rules can be partial
+        const existingRules = this.rowToCondition(existing.rows[0]).rules;
+        const finalRules = {
+            countries: rules?.countries ?? existingRules.countries,
+            companyIds: rules?.companyIds ?? existingRules.companyIds,
+            driverIds: rules?.driverIds ?? existingRules.driverIds,
+            vehicleIds: rules?.vehicleIds ?? existingRules.vehicleIds,
+        };
+
+        await tx.execute({
+            sql: `UPDATE conditions SET name = ?, rules_countries = ?, rules_company_ids = ?, rules_driver_ids = ?, rules_vehicle_ids = ?
+                    WHERE id = ? AND application_id = ?`,
+            args: [
+                finalName, 
+                JSON.stringify(finalRules.countries), 
+                JSON.stringify(finalRules.companyIds), 
+                JSON.stringify(finalRules.driverIds), 
+                JSON.stringify(finalRules.vehicleIds), 
+                conditionId, 
+                appId
+            ]
+        });
+        await tx.commit();
+      } catch (e) {
+          await tx.rollback();
+          throw e;
+      }
+
       const condition = await this.getCondition(appId, conditionId);
       if (!condition) throw new Error("Could not find condition after update");
       return condition;
