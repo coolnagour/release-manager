@@ -24,6 +24,8 @@ import { findOrCreateUser } from "@/actions/app-actions";
 import { Role } from "@/types/roles";
 
 const MOCK_AUTH_EMAIL = process.env.NEXT_PUBLIC_USE_MOCK_AUTH;
+const MOCK_AUTH_ID = process.env.NEXT_PUBLIC_USE_MOCK_ID;
+
 
 interface AuthContextType {
   user: User | null;
@@ -36,7 +38,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const createMockUser = (email: string): User => ({
-  uid: `mock-user-id-${email}`,
+  uid: MOCK_AUTH_ID || `mock-user-id-${email}`,
   email: email,
   displayName: `Mock User (${email.split('@')[0]})`,
   photoURL: "https://placehold.co/100x100.png",
@@ -63,7 +65,7 @@ const createMockUser = (email: string): User => ({
 });
 
 const createMockUserProfile = (email: string): UserProfile => ({
-    uid: `mock-user-id-${email}`,
+    uid: MOCK_AUTH_ID || `mock-user-id-${email}`,
     email: email,
     displayName: `Mock User (${email.split('@')[0]})`,
     photoURL: "https://placehold.co/100x100.png",
