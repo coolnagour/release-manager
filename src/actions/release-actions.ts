@@ -120,21 +120,50 @@ function isReleaseAvailableForContext(release: Release, context: EvaluationConte
         return false;
     }
     
-    // Check if the context matches ALL conditions associated with the release
-    return releaseConditions.every(condition => {
-        const { rules } = condition;
-        const countryMatch = rules.countries.length === 0 || (context.country ? rules.countries.includes(context.country) : false);
-        const companyMatch = rules.companyIds.length === 0 || (context.companyId ? rules.companyIds.includes(context.companyId) : false);
+    // The context must match the combined rules of ALL associated conditions.
+    // We can merge all rules into a single set for evaluation.
+    const combinedRules = {
+      countries: [...new Set(releaseConditions.flatMap(c => c.rules.countries))],
+      companyIds: [...new Set(releaseConditions.flatMap(c => c.rules.companyIds))],
+      driverIds: [...new Set(releaseConditions.flatMap(c => c.rules.driverIds))],
+      vehicleIds: [...new Set(releaseConditions.flatMap(c => c.rules.vehicleIds))],
+    };
+    
+    const countryMatch = combinedRules.countries.length === 0 || (context.country ? combinedRules.countries.includes(context.country) : false);
+    const companyMatch = combinedRules.companyIds.length === 0 || (context.companyId ? combinedRules.companyIds.includes(context.companyId) : false);
+    
+    // For driver/vehicle, the release is available if EITHER a driver rule OR a vehicle rule matches the context.
+    const driverMatch = combinedRules.driverIds.length === 0 || (context.driverId ? combinedRules.driverIds.includes(context.driverId) : false);
+    const vehicleMatch = combinedRules.vehicleIds.length === 0 || (context.vehicleId ? combinedRules.vehicleIds.includes(context.vehicleId) : false);
 
-        const driverRuleMatch = rules.driverIds.length === 0 || (context.driverId ? rules.driverIds.includes(context.driverId) : false);
-        const vehicleRuleMatch = rules.vehicleIds.length === 0 || (context.vehicleId ? rules.vehicleIds.includes(context.vehicleId) : false);
-        
-        // Since driver and vehicle rules are mutually exclusive within a condition, this simplifies to checking if either rule set passes.
-        // If one is defined, the other is empty, so it will pass. If both are empty, it passes.
-        const driverOrVehicleMatch = driverRuleMatch || vehicleRuleMatch;
-        
-        return countryMatch && companyMatch && driverOrVehicleMatch;
-    });
+    // If both driver and vehicle rules exist (from different conditions), we check if context matches either.
+    // If only one type of rule exists, the other is effectively "pass-through".
+    // If no driver or vehicle rules exist, it's a "pass-through".
+    const driverOrVehicleMatch = (combinedRules.driverIds.length > 0 || combinedRules.vehicleIds.length > 0)
+      ? (driverMatch && combinedRules.driverIds.length > 0) || (vehicleMatch && combinedRules.vehicleIds.length > 0)
+      : true;
+
+
+    // A special case: if both driver and vehicle rules are specified across all conditions,
+    // we need to be careful. The logic should be (driver rules pass) OR (vehicle rules pass).
+    // Let's refine the logic for driver/vehicle.
+    const hasDriverRules = combinedRules.driverIds.length > 0;
+    const hasVehicleRules = combinedRules.vehicleIds.length > 0;
+
+    let driverVehicleRuleResult = true; // Default to true if no rules specified.
+
+    if (hasDriverRules && hasVehicleRules) {
+        // If rules for both exist across different conditions, context must match one of them.
+        driverVehicleRuleResult = (context.driverId ? combinedRules.driverIds.includes(context.driverId) : false) || (context.vehicleId ? combinedRules.vehicleIds.includes(context.vehicleId) : false);
+    } else if (hasDriverRules) {
+        // Only driver rules specified.
+        driverVehicleRuleResult = context.driverId ? combinedRules.driverIds.includes(context.driverId) : false;
+    } else if (hasVehicleRules) {
+        // Only vehicle rules specified.
+        driverVehicleRuleResult = context.vehicleId ? combinedRules.vehicleIds.includes(context.vehicleId) : false;
+    }
+
+    return countryMatch && companyMatch && driverVehicleRuleResult;
 }
 
 export async function evaluateContext(appId: string, context: EvaluationContext): Promise<{data?: Release | null, error?: string}> {
