@@ -67,6 +67,7 @@ export class FirestoreDataService implements DataService {
         status: data.status || ReleaseStatus.ACTIVE,
         applicationId: data.applicationId,
         createdAt: (data.createdAt as Timestamp).toDate(),
+        conditionIds: data.conditionIds || [],
     };
   }
 

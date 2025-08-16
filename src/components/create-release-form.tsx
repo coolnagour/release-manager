@@ -21,6 +21,8 @@ import { useTransition, useEffect } from "react";
 import { Release, ReleaseStatus } from "@/types/release";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { useRouter } from "next/navigation";
+import { Condition } from "@/types/condition";
+import { MultiSelect } from "./ui/multi-select";
 
 const formSchema = z.object({
   versionName: z.string().min(1, {
@@ -30,15 +32,17 @@ const formSchema = z.object({
     message: "Version code must be at least 1 character.",
   }),
   status: z.nativeEnum(ReleaseStatus),
+  conditionIds: z.array(z.string()).default([]),
 });
 
 interface CreateReleaseFormProps {
     appId: string;
+    conditions: Condition[];
     onReleaseCreated?: (newRelease: Release) => void;
     initialVersionCode?: string;
 }
 
-export function CreateReleaseForm({ appId, onReleaseCreated, initialVersionCode }: CreateReleaseFormProps) {
+export function CreateReleaseForm({ appId, conditions, onReleaseCreated, initialVersionCode }: CreateReleaseFormProps) {
   const { toast } = useToast();
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -49,6 +53,7 @@ export function CreateReleaseForm({ appId, onReleaseCreated, initialVersionCode 
       versionName: "",
       versionCode: initialVersionCode || "",
       status: ReleaseStatus.ACTIVE,
+      conditionIds: [],
     },
   });
 
@@ -58,6 +63,7 @@ export function CreateReleaseForm({ appId, onReleaseCreated, initialVersionCode 
     }
   }, [initialVersionCode, form]);
 
+  const conditionOptions = conditions.map(c => ({ value: c.id, label: c.name }));
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     startTransition(async () => {
@@ -140,6 +146,25 @@ export function CreateReleaseForm({ appId, onReleaseCreated, initialVersionCode 
               </FormItem>
             )}
           />
+           <FormField
+              control={form.control}
+              name="conditionIds"
+              render={({ field }) => (
+                <FormItem className="mt-8">
+                  <FormLabel>Conditions</FormLabel>
+                  <FormControl>
+                    <MultiSelect
+                      options={conditionOptions}
+                      selected={field.value}
+                      onChange={field.onChange}
+                      placeholder="Select conditions..."
+                      disabled={isPending}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
         </div>
         <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => router.back()} disabled={isPending}>

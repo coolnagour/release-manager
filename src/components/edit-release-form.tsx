@@ -21,6 +21,8 @@ import { useTransition } from "react";
 import { Release, ReleaseStatus } from "@/types/release";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { useRouter } from "next/navigation";
+import { Condition } from "@/types/condition";
+import { MultiSelect } from "./ui/multi-select";
 
 const formSchema = z.object({
   versionName: z.string().min(1, {
@@ -30,15 +32,17 @@ const formSchema = z.object({
     message: "Version code must be at least 1 character.",
   }),
   status: z.nativeEnum(ReleaseStatus),
+  conditionIds: z.array(z.string()).default([]),
 });
 
 interface EditReleaseFormProps {
     appId: string;
     release: Release;
+    conditions: Condition[];
     onReleaseUpdated?: (updatedRelease: Release) => void;
 }
 
-export function EditReleaseForm({ appId, release, onReleaseUpdated }: EditReleaseFormProps) {
+export function EditReleaseForm({ appId, release, conditions, onReleaseUpdated }: EditReleaseFormProps) {
   const { toast } = useToast();
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -49,8 +53,11 @@ export function EditReleaseForm({ appId, release, onReleaseUpdated }: EditReleas
       versionName: release.versionName,
       versionCode: release.versionCode,
       status: release.status,
+      conditionIds: release.conditionIds || [],
     },
   });
+
+  const conditionOptions = conditions.map(c => ({ value: c.id, label: c.name }));
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     startTransition(async () => {
@@ -130,6 +137,25 @@ export function EditReleaseForm({ appId, release, onReleaseUpdated }: EditReleas
                 <FormMessage />
                 </FormItem>
             )}
+            />
+             <FormField
+                control={form.control}
+                name="conditionIds"
+                render={({ field }) => (
+                    <FormItem className="mt-8">
+                        <FormLabel>Conditions</FormLabel>
+                        <FormControl>
+                            <MultiSelect
+                                options={conditionOptions}
+                                selected={field.value}
+                                onChange={field.onChange}
+                                placeholder="Select conditions..."
+                                disabled={isPending}
+                            />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                )}
             />
         </div>
         <div className="flex justify-end gap-2">

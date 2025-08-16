@@ -15,6 +15,7 @@ const formSchema = z.object({
     message: "Version code is required.",
   }),
   status: z.nativeEnum(ReleaseStatus),
+  conditionIds: z.array(z.string()).default([]),
 });
 
 export async function createRelease(appId: string, values: z.infer<typeof formSchema>): Promise<{ data?: Release, error?: string }> {
@@ -26,13 +27,14 @@ export async function createRelease(appId: string, values: z.infer<typeof formSc
     };
   }
 
-  const { versionName, versionCode, status } = validatedFields.data;
+  const { versionName, versionCode, status, conditionIds } = validatedFields.data;
 
   try {
     const newRelease = await db.createRelease(appId, {
       versionName,
       versionCode,
       status,
+      conditionIds,
     });
     revalidatePath(`/app/${appId}/releases`);
     return { data: newRelease };

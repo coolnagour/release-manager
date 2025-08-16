@@ -14,4 +14,5 @@ export interface Release {
   status: ReleaseStatus;
   applicationId: string;
   createdAt: Date;
+  conditionIds: string[];
 }

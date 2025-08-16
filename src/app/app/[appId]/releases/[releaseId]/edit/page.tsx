@@ -16,12 +16,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
+import { Condition } from "@/types/condition";
+import { getConditionsForApp } from "@/actions/condition-actions";
 
 async function getRelease(appId: string, releaseId: string): Promise<Release | null> {
-    const app = await db.getApp(appId);
-    if (!app) return null;
-    const releaseRef = await db.getReleasesForApp(appId, 1, 1000); // simplified for example
-    const release = releaseRef.releases.find(r => r.id === releaseId);
+    // This is a temporary client-side data fetching pattern.
+    // Ideally, this should be a server action or API route.
+    const releasesData = await db.getReleasesForApp(appId, 1, 1000); // Fetch all for simplicity
+    const release = releasesData.releases.find(r => r.id === releaseId);
     return release || null;
 }
 
@@ -31,6 +33,7 @@ function EditReleasePage() {
   const router = useRouter();
   const params = useParams();
   const [release, setRelease] = useState<Release | null>(null);
+  const [conditions, setConditions] = useState<Condition[]>([]);
   const [loading, setLoading] = useState(true);
 
   const appId = Array.isArray(params.appId) ? params.appId[0] : params.appId;
@@ -46,16 +49,27 @@ function EditReleasePage() {
     }
 
     if (appId && releaseId) {
-        const fetchRelease = async () => {
-            const releaseData = await getRelease(appId, releaseId);
-             if (releaseData) {
-                setRelease(releaseData);
-            } else {
-                router.replace(`/app/${appId}/releases`); // Release not found
+        const fetchData = async () => {
+            try {
+                const [releaseData, conditionsData] = await Promise.all([
+                    getRelease(appId, releaseId),
+                    getConditionsForApp(appId)
+                ]);
+
+                if (releaseData) {
+                    setRelease(releaseData);
+                    setConditions(conditionsData);
+                } else {
+                    router.replace(`/app/${appId}/releases`); // Release not found
+                }
+            } catch (error) {
+                console.error("Failed to fetch release or conditions", error);
+                router.replace(`/app/${appId}/releases`);
+            } finally {
+                setLoading(false);
             }
-            setLoading(false);
-        }
-        fetchRelease();
+        };
+        fetchData();
     }
   }, [appId, releaseId, userProfile, authLoading, router]);
 
@@ -104,7 +118,7 @@ function EditReleasePage() {
       </div>
       <Card className="w-full shadow-lg flex-1 flex flex-col">
         <CardContent className="pt-6 h-full flex-1 flex flex-col">
-          <EditReleaseForm appId={appId} release={release} />
+          <EditReleaseForm appId={appId} release={release} conditions={conditions} />
         </CardContent>
       </Card>
     </div>
