@@ -77,6 +77,7 @@ export function EditReleaseForm({ appId, release, conditions, onReleaseUpdated }
     };
     
     const descriptions = [];
+    let hasDriverOrVehicleRule = false;
 
     if (combinedRules.countries.length > 0) {
         descriptions.push(`in countries: ${combinedRules.countries.join(', ')}`);
@@ -87,16 +88,36 @@ export function EditReleaseForm({ appId, release, conditions, onReleaseUpdated }
     }
 
     if (combinedRules.driverIds.length > 0) {
-        descriptions.push(`for ${combinedRules.driverIds.length} specific drivers`);
-    } else if (combinedRules.vehicleIds.length > 0) {
-        descriptions.push(`for ${combinedRules.vehicleIds.length} specific vehicles`);
+        descriptions.push(`for ${combinedRules.driverIds.length} specific driver(s)`);
+        hasDriverOrVehicleRule = true;
+    } 
+    
+    if (combinedRules.vehicleIds.length > 0) {
+        descriptions.push(`for ${combinedRules.vehicleIds.length} specific vehicle(s)`);
+        hasDriverOrVehicleRule = true;
     }
-     
+
     if(descriptions.length === 0) {
         return "This release will be available to all users (the selected conditions have no rules).";
     }
 
-    return `This release will be available ${descriptions.join(', ')}.`;
+    let summaryString = `This release will be available `;
+    const countryAndCompanyRules = descriptions.filter(d => !d.includes('driver') && !d.includes('vehicle'));
+    const driverAndVehicleRules = descriptions.filter(d => d.includes('driver') || d.includes('vehicle'));
+
+    summaryString += countryAndCompanyRules.join(' AND ');
+    
+    if (countryAndCompanyRules.length > 0 && driverAndVehicleRules.length > 0) {
+      summaryString += ' AND ';
+    }
+    
+    if(driverAndVehicleRules.length > 1) {
+       summaryString += `(${driverAndVehicleRules.join(' OR ')})`;
+    } else {
+       summaryString += driverAndVehicleRules.join('');
+    }
+
+    return summaryString + ".";
 
   }, [selectedConditionIds, conditions]);
 
