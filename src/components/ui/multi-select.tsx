@@ -104,7 +104,7 @@ export function MultiSelect({
             placeholder={placeholder}
             disabled={disabled}
             className="ml-2 flex-1 bg-transparent outline-none placeholder:text-muted-foreground"
-            autoComplete="off"
+            autoComplete="nope"
           />
         </div>
       </div>
