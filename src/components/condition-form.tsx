@@ -56,7 +56,7 @@ const numberStringToArray = z.preprocess((val) => {
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters."),
   rules: z.object({
-      region: stringToArray,
+      country: stringToArray,
       companyId: numberStringToArray,
       driverId: stringToArray,
       vehicleId: stringToArray,
@@ -76,7 +76,7 @@ export function ConditionForm({ appId, onConditionSubmitted, condition }: Condit
     defaultValues: {
       name: condition?.name || "",
       rules: {
-        region: condition?.rules.region || [],
+        country: condition?.rules.country || [],
         companyId: condition?.rules.companyId || [],
         driverId: condition?.rules.driverId || [],
         vehicleId: condition?.rules.vehicleId || [],
@@ -145,10 +145,10 @@ export function ConditionForm({ appId, onConditionSubmitted, condition }: Condit
             <CardContent className="space-y-4">
                  <FormField
                     control={form.control}
-                    name="rules.region"
+                    name="rules.country"
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel>Region</FormLabel>
+                            <FormLabel>Country</FormLabel>
                             <FormControl>
                                 <Input 
                                     placeholder="e.g., US,CA,MX" 
