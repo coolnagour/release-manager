@@ -47,7 +47,7 @@ export function TagInput({ value: tags = [], onChange, placeholder, className, i
                 {tag}
                 <button
                     type="button"
-                    className="ml-1 rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-secondary"
+                    className="ml-1 rounded-full outline-none"
                     onClick={() => removeTag(index)}
                     disabled={props.disabled}
                 >
