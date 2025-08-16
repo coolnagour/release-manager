@@ -39,9 +39,13 @@ export function TagInput({ value: tags = [], onChange, placeholder, className, i
     onChange(tags.filter((_, index) => index !== indexToRemove));
   };
 
+  const handleClearAll = () => {
+    onChange([]);
+  }
+
   return (
-    <div>
-        <div className={cn("flex flex-wrap items-center gap-2 rounded-md border border-input p-2 text-sm ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2", className)}>
+    <div className={cn("flex items-center gap-2 rounded-md border border-input p-2 text-sm ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2", className)}>
+        <div className="flex flex-1 flex-wrap items-center gap-2">
             {tags.map((tag, index) => (
                 <Badge key={index} variant="secondary">
                 {tag}
@@ -61,10 +65,21 @@ export function TagInput({ value: tags = [], onChange, placeholder, className, i
                 onChange={handleInputChange}
                 onKeyDown={handleInputKeyDown}
                 placeholder={tags.length > 0 ? "" : placeholder}
-                className="flex-1 border-0 shadow-none focus-visible:ring-0 h-auto p-0 bg-transparent focus-visible:ring-offset-0"
+                className="min-w-[60px] flex-1 border-0 bg-transparent shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 h-auto p-0"
                 {...props}
             />
         </div>
+        {tags.length > 0 && (
+            <button
+                type="button"
+                className="rounded-full outline-none text-muted-foreground hover:text-foreground"
+                onClick={handleClearAll}
+                disabled={props.disabled}
+                aria-label="Clear all tags"
+            >
+                <X className="h-4 w-4" />
+            </button>
+        )}
     </div>
   );
 }
