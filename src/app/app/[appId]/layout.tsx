@@ -14,7 +14,7 @@ import {
   SidebarFooter,
 } from "@/components/ui/sidebar";
 import { Header } from "@/components/header";
-import { LayoutDashboard, LogOut, Moon, Settings, Sun, User as UserIcon, Pencil, Tags } from "lucide-react";
+import { LayoutDashboard, LogOut, Moon, Settings, Sun, User as UserIcon, Pencil, Tags, ShieldCheck } from "lucide-react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -115,6 +115,18 @@ export default function AppLayout({
                   <Link href={`/app/${appId}/releases`}>
                     <Tags />
                     <span>Releases</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+               <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={pathname.endsWith("/conditions")}
+                  tooltip="Conditions"
+                >
+                  <Link href={`/app/${appId}/conditions`}>
+                    <ShieldCheck />
+                    <span>Conditions</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

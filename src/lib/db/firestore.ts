@@ -8,6 +8,7 @@ import { Application } from "@/types/application";
 import { UserProfile } from "@/types/user-profile";
 import { Role } from "@/types/roles";
 import { Release, ReleaseStatus } from "@/types/release";
+import { Condition } from "@/types/condition";
 
 const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
 
@@ -64,6 +65,17 @@ export class FirestoreDataService implements DataService {
         versionName: data.versionName,
         versionCode: data.versionCode,
         status: data.status || ReleaseStatus.ACTIVE,
+        applicationId: data.applicationId,
+        createdAt: (data.createdAt as Timestamp).toDate(),
+    };
+  }
+
+  private toCondition(doc: FirebaseFirestore.DocumentSnapshot): Condition {
+    const data = doc.data()!;
+    return {
+        id: doc.id,
+        name: data.name,
+        rules: data.rules,
         applicationId: data.applicationId,
         createdAt: (data.createdAt as Timestamp).toDate(),
     };
@@ -195,5 +207,37 @@ export class FirestoreDataService implements DataService {
     async deleteRelease(appId: string, releaseId: string): Promise<void> {
         const releaseRef = appsCollection.doc(appId).collection("releases").doc(releaseId);
         await releaseRef.delete();
+    }
+
+    async createCondition(appId: string, conditionData: Omit<Condition, "id" | "createdAt" | "applicationId">): Promise<Condition> {
+      const conditionRef = await appsCollection.doc(appId).collection("conditions").add({
+          ...conditionData,
+          applicationId: appId,
+          createdAt: Timestamp.now(),
+      });
+      const newConditionDoc = await conditionRef.get();
+      return this.toCondition(newConditionDoc);
+    }
+
+    async getConditionsForApp(appId: string): Promise<Condition[]> {
+        const snapshot = await appsCollection.doc(appId).collection("conditions")
+            .orderBy("createdAt", "desc")
+            .get();
+        return snapshot.docs.map(this.toCondition);
+    }
+
+    async updateCondition(appId: string, conditionId: string, updates: Partial<Omit<Condition, "id" | "createdAt" | "applicationId">>): Promise<Condition> {
+        const conditionRef = appsCollection.doc(appId).collection("conditions").doc(conditionId);
+        await conditionRef.update(updates);
+        const updatedDoc = await conditionRef.get();
+        if (!updatedDoc.exists) {
+            throw new Error("Failed to update condition: Condition not found.");
+        }
+        return this.toCondition(updatedDoc);
+    }
+
+    async deleteCondition(appId: string, conditionId: string): Promise<void> {
+        const conditionRef = appsCollection.doc(appId).collection("conditions").doc(conditionId);
+        await conditionRef.delete();
     }
 }

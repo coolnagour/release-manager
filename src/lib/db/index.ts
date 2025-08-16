@@ -3,6 +3,7 @@ import { Application } from "@/types/application";
 import { Release } from "@/types/release";
 import { UserProfile } from "@/types/user-profile";
 import { FirestoreDataService } from "./firestore";
+import { Condition } from "@/types/condition";
 
 export interface DataService {
   createApp(appData: Omit<Application, "id" | "createdAt">): Promise<Application>;
@@ -17,6 +18,11 @@ export interface DataService {
   getReleasesForApp(appId: string, page: number, limit: number): Promise<{ releases: Release[], total: number }>;
   updateRelease(appId: string, releaseId: string, updates: Partial<Omit<Release, "id" | "createdAt" | "applicationId">>): Promise<Release>;
   deleteRelease(appId: string, releaseId: string): Promise<void>;
+
+  createCondition(appId: string, conditionData: Omit<Condition, "id" | "createdAt" | "applicationId">): Promise<Condition>;
+  getConditionsForApp(appId: string): Promise<Condition[]>;
+  updateCondition(appId: string, conditionId: string, updates: Partial<Omit<Condition, "id" | "createdAt" | "applicationId">>): Promise<Condition>;
+  deleteCondition(appId: string, conditionId: string): Promise<void>;
 }
 
 // For now, we are hardcoding the Firestore implementation.
