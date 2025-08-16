@@ -4,11 +4,13 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { useMemo } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -56,6 +58,48 @@ export function EditReleaseForm({ appId, release, conditions, onReleaseUpdated }
       conditionIds: release.conditionIds || [],
     },
   });
+
+  const { watch } = form;
+  const selectedConditionIds = watch("conditionIds");
+
+  const conditionsSummary = useMemo(() => {
+    if (!selectedConditionIds || selectedConditionIds.length === 0) {
+      return "This release will be available to all users.";
+    }
+
+    const selectedConditions = conditions.filter(c => selectedConditionIds.includes(c.id));
+
+    const combinedRules = {
+        countries: [...new Set(selectedConditions.flatMap(c => c.rules.countries || []))],
+        companyIds: [...new Set(selectedConditions.flatMap(c => c.rules.companyIds || []))],
+        driverIds: [...new Set(selectedConditions.flatMap(c => c.rules.driverIds || []))],
+        vehicleIds: [...new Set(selectedConditions.flatMap(c => c.rules.vehicleIds || []))],
+    };
+    
+    const descriptions = [];
+
+    if (combinedRules.countries.length > 0) {
+        descriptions.push(`in ${combinedRules.countries.length} selected countries`);
+    }
+
+    if (combinedRules.companyIds.length > 0) {
+        descriptions.push(`for ${combinedRules.companyIds.length} selected companies`);
+    }
+
+    if (combinedRules.driverIds.length > 0) {
+        descriptions.push(`for ${combinedRules.driverIds.length} specific drivers`);
+    } else if (combinedRules.vehicleIds.length > 0) {
+        descriptions.push(`for ${combinedRules.vehicleIds.length} specific vehicles`);
+    }
+     
+    if(descriptions.length === 0) {
+        return "This release will be available to all users (the selected conditions have no rules).";
+    }
+
+    return `This release will be available ${descriptions.join(', ')}.`;
+
+  }, [selectedConditionIds, conditions]);
+
 
   const conditionOptions = conditions.map(c => ({ value: c.id, label: c.name }));
 
@@ -153,6 +197,9 @@ export function EditReleaseForm({ appId, release, conditions, onReleaseUpdated }
                                 disabled={isPending}
                             />
                         </FormControl>
+                        <FormDescription>
+                          {conditionsSummary}
+                        </FormDescription>
                         <FormMessage />
                     </FormItem>
                 )}
