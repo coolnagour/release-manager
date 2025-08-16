@@ -139,15 +139,17 @@ export class FirestoreDataService implements DataService {
     if (userDoc.exists) {
       return this.toUserProfile(userDoc);
     }
+    
+    if (!userData.email) {
+      throw new Error("User email cannot be null.");
+    }
 
     const usersSnapshot = await usersCollection.limit(1).get();
     const isFirstUser = usersSnapshot.empty;
 
-    const newUser: Omit<UserProfile, "createdAt"> & { createdAt: Date} = {
-      uid: userData.uid,
+    const newUser: UserProfile = {
+      ...userData,
       email: userData.email,
-      displayName: userData.displayName,
-      photoURL: userData.photoURL,
       role: isFirstUser ? Role.SUPERADMIN : Role.USER,
       createdAt: new Date(),
     };

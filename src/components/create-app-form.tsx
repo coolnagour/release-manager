@@ -20,7 +20,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { createApp, updateApp } from "@/actions/app-actions";
-import { useState, useTransition, useEffect } from "react";
+import { useState, useTransition } from "react";
 import { Application } from "@/types/application";
 import { Role } from "@/types/roles";
 import { Trash } from "lucide-react";
@@ -88,7 +88,7 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
         users: values.users.map(u => u.value).join(','),
     };
 
-    if (values.users.length === 0) {
+    if (values.users.length === 0 && user?.email) {
         transformedValues.users = user.email;
     }
 
@@ -244,4 +244,3 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
     </Form>
   );
 }
-    

@@ -5,7 +5,7 @@ import "dotenv/config";
 const schemaQueries = [
     `CREATE TABLE IF NOT EXISTS users (
       uid TEXT PRIMARY KEY,
-      email TEXT UNIQUE,
+      email TEXT UNIQUE NOT NULL,
       display_name TEXT,
       photo_url TEXT,
       role TEXT NOT NULL,
@@ -21,9 +21,10 @@ const schemaQueries = [
     );`,
     `CREATE TABLE IF NOT EXISTS application_users (
       application_id TEXT NOT NULL,
-      user_email TEXT NOT NULL,
-      PRIMARY KEY (application_id, user_email),
-      FOREIGN KEY (application_id) REFERENCES applications(id) ON DELETE CASCADE
+      user_id TEXT NOT NULL,
+      PRIMARY KEY (application_id, user_id),
+      FOREIGN KEY (application_id) REFERENCES applications(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(uid) ON DELETE CASCADE
     );`,
     `CREATE TABLE IF NOT EXISTS releases (
       id TEXT PRIMARY KEY,

@@ -24,10 +24,10 @@ export class TursoDataService implements DataService {
   // Helper to convert row to Application with users
   private async rowToApplication(row: any): Promise<Application> {
     const usersResult = await this.client.execute({
-        sql: "SELECT user_email FROM application_users WHERE application_id = ?",
+        sql: "SELECT u.email FROM users u JOIN application_users au ON u.uid = au.user_id WHERE au.application_id = ?",
         args: [row.id]
     });
-    const users = usersResult.rows.map((r: any) => r.user_email as string);
+    const users = usersResult.rows.map((r: any) => r.email as string);
     return {
         id: row.id as string,
         name: row.name as string,
@@ -37,11 +37,31 @@ export class TursoDataService implements DataService {
         users: users,
     };
   }
+  
+  private async getUsersFromEmails(emails: string[]): Promise<UserProfile[]> {
+      if (emails.length === 0) return [];
+      const placeholders = emails.map(() => '?').join(',');
+      const result = await this.client.execute({
+          sql: `SELECT * FROM users WHERE email IN (${placeholders})`,
+          args: emails
+      });
+      return result.rows.map(u => ({
+          uid: u.uid as string,
+          email: u.email as string,
+          displayName: u.display_name as string,
+          photoURL: u.photo_url as string,
+          role: u.role as Role,
+          createdAt: new Date(u.created_at as string)
+      }));
+  }
 
   async createApp(appData: Omit<Application, "id" | "createdAt">): Promise<Application> {
     const id = randomUUID();
     const createdAt = new Date();
     
+    const userProfiles = await this.getUsersFromEmails(appData.users);
+    const userIds = userProfiles.map(u => u.uid);
+
     const tx = await this.client.transaction("write");
     try {
         await tx.execute({
@@ -49,10 +69,10 @@ export class TursoDataService implements DataService {
             args: [id, appData.name, appData.packageName, appData.ownerId, createdAt.toISOString()]
         });
         
-        for (const email of appData.users) {
+        for (const userId of userIds) {
             await tx.execute({
-                sql: "INSERT INTO application_users (application_id, user_email) VALUES (?, ?)",
-                args: [id, email]
+                sql: "INSERT INTO application_users (application_id, user_id) VALUES (?, ?)",
+                args: [id, userId]
             });
         }
         await tx.commit();
@@ -74,12 +94,17 @@ export class TursoDataService implements DataService {
   }
 
   async getAppsForUser(userEmail: string): Promise<Application[]> {
-     const result = await this.client.execute({
-        sql: `SELECT a.* FROM applications a
-              JOIN application_users au ON a.id = au.application_id
-              WHERE au.user_email = ?
-              ORDER BY a.created_at DESC`,
+     const userResult = await this.client.execute({
+        sql: "SELECT uid FROM users WHERE email = ?",
         args: [userEmail]
+     });
+
+     if (userResult.rows.length === 0) return [];
+     const userId = userResult.rows[0].uid;
+
+     const result = await this.client.execute({
+        sql: `SELECT a.* FROM applications a JOIN application_users au ON a.id = au.application_id WHERE au.user_id = ? ORDER BY a.created_at DESC`,
+        args: [userId]
      });
      return Promise.all(result.rows.map(row => this.rowToApplication(row)));
   }
@@ -104,14 +129,17 @@ export class TursoDataService implements DataService {
         }
 
         if (updates.users) {
+            const userProfiles = await this.getUsersFromEmails(updates.users);
+            const userIds = userProfiles.map(u => u.uid);
+
             await tx.execute({
                 sql: "DELETE FROM application_users WHERE application_id = ?",
                 args: [id]
             });
-            for (const email of updates.users) {
+            for (const userId of userIds) {
                 await tx.execute({
-                    sql: "INSERT INTO application_users (application_id, user_email) VALUES (?, ?)",
-                    args: [id, email]
+                    sql: "INSERT INTO application_users (application_id, user_id) VALUES (?, ?)",
+                    args: [id, userId]
                 });
             }
         }
@@ -133,6 +161,10 @@ export class TursoDataService implements DataService {
   }
 
   async findOrCreateUser(userData: Pick<UserProfile, "uid" | "email" | "displayName" | "photoURL">): Promise<UserProfile> {
+    if (!userData.email) {
+      throw new Error("User email cannot be null.");
+    }
+    
     const existingUser = await this.client.execute({
         sql: "SELECT * FROM users WHERE uid = ?",
         args: [userData.uid]
@@ -157,6 +189,7 @@ export class TursoDataService implements DataService {
 
     const newUser: UserProfile = {
         ...userData,
+        email: userData.email,
         role,
         createdAt
     };
