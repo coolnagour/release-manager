@@ -277,14 +277,28 @@ export class TursoDataService implements DataService {
 
       const tx = await this.client.transaction("write");
       try {
-        if (Object.keys(releaseUpdates).length > 0) {
-            await tx.execute({
-                sql: "UPDATE releases SET version_name = ?, version_code = ?, status = ? WHERE id = ? AND application_id = ?",
-                args: [releaseUpdates.versionName, releaseUpdates.versionCode, releaseUpdates.status, releaseId, appId]
-            });
+        const existingReleaseResult = await tx.execute({
+          sql: "SELECT * FROM releases WHERE id = ? AND application_id = ?",
+          args: [releaseId, appId],
+        });
+    
+        if (existingReleaseResult.rows.length === 0) {
+          throw new Error("Release not found");
         }
+        const existingRelease = existingReleaseResult.rows[0];
+
+        const finalRelease = {
+            versionName: releaseUpdates.versionName ?? existingRelease.version_name,
+            versionCode: releaseUpdates.versionCode ?? existingRelease.version_code,
+            status: releaseUpdates.status ?? existingRelease.status
+        }
+
+        await tx.execute({
+            sql: "UPDATE releases SET version_name = ?, version_code = ?, status = ? WHERE id = ? AND application_id = ?",
+            args: [finalRelease.versionName, finalRelease.versionCode, finalRelease.status, releaseId, appId]
+        });
         
-        if (conditionIds) {
+        if (conditionIds !== undefined) {
             await tx.execute({
                 sql: "DELETE FROM release_conditions WHERE release_id = ?",
                 args: [releaseId]
@@ -315,15 +329,20 @@ export class TursoDataService implements DataService {
   }
   
   private rowToCondition(row: any): Condition {
+      const rules_countries = row.rules_countries as string | null;
+      const rules_company_ids = row.rules_company_ids as string | null;
+      const rules_driver_ids = row.rules_driver_ids as string | null;
+      const rules_vehicle_ids = row.rules_vehicle_ids as string | null;
+
       return {
           id: row.id as string,
           applicationId: row.application_id as string,
           name: row.name as string,
           rules: {
-              countries: row.rules_countries ? JSON.parse(row.rules_countries) : [],
-              companyIds: row.rules_company_ids ? JSON.parse(row.rules_company_ids) : [],
-              driverIds: row.rules_driver_ids ? JSON.parse(row.rules_driver_ids) : [],
-              vehicleIds: row.rules_vehicle_ids ? JSON.parse(row.rules_vehicle_ids) : [],
+              countries: rules_countries ? JSON.parse(rules_countries) : [],
+              companyIds: rules_company_ids ? JSON.parse(rules_company_ids) : [],
+              driverIds: rules_driver_ids ? JSON.parse(rules_driver_ids) : [],
+              vehicleIds: rules_vehicle_ids ? JSON.parse(rules_vehicle_ids) : [],
           },
           createdAt: new Date(row.created_at as string)
       };
@@ -364,7 +383,7 @@ export class TursoDataService implements DataService {
           sql: "SELECT * FROM conditions WHERE application_id = ? ORDER BY created_at DESC",
           args: [appId]
       });
-      return result.rows.map(this.rowToCondition);
+      return result.rows.map(r => this.rowToCondition(r));
   }
 
   async updateCondition(appId: string, conditionId: string, updates: Partial<Omit<Condition, "id" | "createdAt" | "applicationId">>): Promise<Condition> {
