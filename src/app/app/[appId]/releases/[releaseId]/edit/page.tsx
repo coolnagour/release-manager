@@ -5,6 +5,8 @@ import { EditReleaseForm } from "@/components/edit-release-form";
 import {
   Card,
   CardContent,
+  CardHeader,
+  CardTitle,
 } from "@/components/ui/card";
 import { useAuth } from "@/contexts/auth-context";
 import { useParams, useRouter } from "next/navigation";
@@ -18,6 +20,7 @@ import { ArrowLeft } from "lucide-react";
 import { Condition } from "@/types/condition";
 import { getConditionsForApp } from "@/actions/condition-actions";
 import { getRelease } from "@/actions/release-actions";
+import { ReleaseEvaluator } from "@/components/release-evaluator";
 
 
 function EditReleasePage() {
@@ -69,9 +72,9 @@ function EditReleasePage() {
 
   if (isLoading) {
     return (
-      <div className="p-4 sm:p-6 lg:p-8 flex flex-col flex-1">
-        <Skeleton className="h-8 w-48 mb-2" />
-        <Skeleton className="h-4 w-64 mb-6" />
+      <div className="p-4 sm:p-6 lg:p-8 flex flex-col flex-1 gap-6">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-4 w-64" />
         <Card className="w-full shadow-lg flex-1">
           <CardContent className="space-y-8 pt-6">
             <div className="space-y-2">
@@ -97,8 +100,8 @@ function EditReleasePage() {
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 flex flex-col flex-1">
-      <div className="mb-6">
+    <div className="p-4 sm:p-6 lg:p-8 flex flex-col flex-1 gap-6">
+      <div>
          <Button variant="ghost" asChild className="mb-4">
             <Link href={`/app/${appId}/releases`}>
                 <ArrowLeft className="mr-2 h-4 w-4" />
@@ -108,9 +111,17 @@ function EditReleasePage() {
         <h1 className="text-3xl font-bold tracking-tight font-headline">Edit Release</h1>
         <p className="text-muted-foreground">Update the details for {release.versionName}.</p>
       </div>
-      <Card className="w-full shadow-lg flex-1 flex flex-col">
-        <CardContent className="pt-6 h-full flex-1 flex flex-col">
+      <Card className="w-full shadow-lg">
+        <CardContent className="pt-6">
           <EditReleaseForm appId={appId} release={release} conditions={conditions} />
+        </CardContent>
+      </Card>
+       <Card className="w-full shadow-lg">
+        <CardHeader>
+          <CardTitle>Evaluate Release</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ReleaseEvaluator appId={appId} releaseId={release.id} />
         </CardContent>
       </Card>
     </div>

@@ -209,6 +209,17 @@ export class FirestoreDataService implements DataService {
       return { releases, total };
   }
 
+  async getActiveReleasesForApp(appId: string): Promise<{ releases: Release[]; total: number; }> {
+      const releasesRef = appsCollection.doc(appId).collection("releases");
+      const snapshot = await releasesRef
+          .where('status', '==', ReleaseStatus.ACTIVE)
+          .orderBy("createdAt", "desc")
+          .get();
+      
+      const releases = snapshot.docs.map(this.toRelease);
+      return { releases, total: releases.length };
+  }
+
     async updateRelease(appId: string, releaseId: string, updates: Partial<Omit<Release, "id" | "createdAt" | "applicationId">>): Promise<Release> {
         const releaseRef = appsCollection.doc(appId).collection("releases").doc(releaseId);
         await releaseRef.update(updates);
