@@ -20,13 +20,11 @@ import { createCondition, updateCondition } from "@/actions/condition-actions";
 import { useTransition } from "react";
 import { Condition, conditionSchema } from "@/types/condition";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
-import { Badge } from "./ui/badge";
-import { X } from "lucide-react";
-import React from "react";
+import { useRouter } from "next/navigation";
 
 interface ConditionFormProps {
     appId: string;
-    onConditionSubmitted: () => void;
+    onConditionSubmitted?: () => void; // Optional now
     condition?: Condition | null;
 }
 
@@ -67,6 +65,7 @@ type FormValues = z.infer<typeof formSchema>;
 
 export function ConditionForm({ appId, onConditionSubmitted, condition }: ConditionFormProps) {
   const { toast } = useToast();
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
   const isEditMode = !!condition;
@@ -112,7 +111,11 @@ export function ConditionForm({ appId, onConditionSubmitted, condition }: Condit
           title: `Condition ${isEditMode ? 'Updated' : 'Created'}`,
           description: `${values.name} has been successfully ${isEditMode ? 'updated' : 'created'}.`,
         });
-        onConditionSubmitted();
+        if (onConditionSubmitted) {
+          onConditionSubmitted();
+        } else {
+          router.push(`/app/${appId}/conditions`);
+        }
         form.reset();
       }
     });
@@ -142,7 +145,7 @@ export function ConditionForm({ appId, onConditionSubmitted, condition }: Condit
                     Define rules to target specific user segments. Leave a field empty to include all users for that category.
                 </FormDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 pt-6">
                  <FormField
                     control={form.control}
                     name="rules.country"
@@ -228,6 +231,9 @@ export function ConditionForm({ appId, onConditionSubmitted, condition }: Condit
         </Card>
 
         <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={() => router.back()} disabled={isPending}>
+                Cancel
+            </Button>
             <Button type="submit" disabled={isPending}>
               {isPending ? (isEditMode ? "Saving..." : "Creating...") : (isEditMode ? "Save Changes" : "Create Condition")}
             </Button>

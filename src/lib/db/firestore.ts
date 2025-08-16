@@ -218,6 +218,14 @@ export class FirestoreDataService implements DataService {
       const newConditionDoc = await conditionRef.get();
       return this.toCondition(newConditionDoc);
     }
+    
+    async getCondition(appId: string, conditionId: string): Promise<Condition | null> {
+        const doc = await appsCollection.doc(appId).collection("conditions").doc(conditionId).get();
+        if (!doc.exists) {
+            return null;
+        }
+        return this.toCondition(doc);
+    }
 
     async getConditionsForApp(appId: string): Promise<Condition[]> {
         const snapshot = await appsCollection.doc(appId).collection("conditions")

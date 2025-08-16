@@ -20,6 +20,7 @@ export interface DataService {
   deleteRelease(appId: string, releaseId: string): Promise<void>;
 
   createCondition(appId: string, conditionData: Omit<Condition, "id" | "createdAt" | "applicationId">): Promise<Condition>;
+  getCondition(appId: string, conditionId: string): Promise<Condition | null>;
   getConditionsForApp(appId: string): Promise<Condition[]>;
   updateCondition(appId: string, conditionId: string, updates: Partial<Omit<Condition, "id" | "createdAt" | "applicationId">>): Promise<Condition>;
   deleteCondition(appId: string, conditionId: string): Promise<void>;

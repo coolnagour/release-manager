@@ -4,7 +4,6 @@
 import {
   Card,
   CardContent,
-  CardFooter,
 } from "@/components/ui/card";
 import { useParams } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
@@ -13,14 +12,6 @@ import { getConditionsForApp, deleteCondition } from "@/actions/condition-action
 import { Skeleton } from "@/components/ui/skeleton";
 import { MoreHorizontal, PlusCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/auth-context";
 import { Role } from "@/types/roles";
 import {
@@ -51,18 +42,18 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast";
-import { ConditionForm } from "@/components/condition-form";
 import { Badge } from "@/components/ui/badge";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 function ConditionsPage() {
   const params = useParams();
+  const router = useRouter();
   const { userProfile } = useAuth();
   const { toast } = useToast();
   const [conditions, setConditions] = useState<Condition[]>([]);
   const [loading, setLoading] = useState(true);
   const [isPending, startTransition] = useTransition();
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [selectedCondition, setSelectedCondition] = useState<Condition | null>(null);
 
   const appId = Array.isArray(params.appId) ? params.appId[0] : params.appId;
 
@@ -81,17 +72,6 @@ function ConditionsPage() {
 
   useEffect(fetchConditions, [appId]);
 
-  const handleFormSubmitted = () => {
-    fetchConditions();
-    setIsFormOpen(false);
-    setSelectedCondition(null);
-  }
-
-  const handleEditClick = (condition: Condition) => {
-    setSelectedCondition(condition);
-    setIsFormOpen(true);
-  }
-
   const handleDeleteClick = async (conditionId: string) => {
     const result = await deleteCondition(appId, conditionId);
     if(result.success) {
@@ -107,13 +87,6 @@ function ConditionsPage() {
         variant: "destructive",
       })
     }
-  }
-
-  const handleOpenChange = (open: boolean) => {
-    if (!open) {
-      setSelectedCondition(null);
-    }
-    setIsFormOpen(open);
   }
   
   const getRuleSummary = (rules: Condition['rules']) => {
@@ -139,27 +112,12 @@ function ConditionsPage() {
           </p>
         </div>
         {canManageConditions && (
-          <Dialog open={isFormOpen} onOpenChange={handleOpenChange}>
-            <DialogTrigger asChild>
-              <Button style={{ backgroundColor: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))" }}>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                New Condition
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>{selectedCondition ? "Edit" : "Create"} Condition</DialogTitle>
-                <DialogDescription>
-                  {selectedCondition ? "Update the" : "Enter the"} details for your condition.
-                </DialogDescription>
-              </DialogHeader>
-              <ConditionForm 
-                appId={appId} 
-                onConditionSubmitted={handleFormSubmitted} 
-                condition={selectedCondition} 
-              />
-            </DialogContent>
-          </Dialog>
+          <Button asChild style={{ backgroundColor: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))" }}>
+            <Link href={`/app/${appId}/conditions/new`}>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              New Condition
+            </Link>
+          </Button>
         )}
       </div>
       
@@ -198,7 +156,7 @@ function ConditionsPage() {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem onClick={() => handleEditClick(condition)}>
+                            <DropdownMenuItem onClick={() => router.push(`/app/${appId}/conditions/${condition.id}/edit`)}>
                               Edit
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />

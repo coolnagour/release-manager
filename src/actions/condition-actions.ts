@@ -29,6 +29,10 @@ export async function createCondition(appId: string, values: ConditionInput): Pr
   }
 }
 
+export async function getCondition(appId: string, conditionId: string): Promise<Condition | null> {
+    return await db.getCondition(appId, conditionId);
+}
+
 export async function getConditionsForApp(appId: string): Promise<Condition[]> {
     return await db.getConditionsForApp(appId);
 }
@@ -43,6 +47,7 @@ export async function updateCondition(appId: string, conditionId: string, values
     try {
         const updatedCondition = await db.updateCondition(appId, conditionId, validatedFields.data);
         revalidatePath(`/app/${appId}/conditions`);
+        revalidatePath(`/app/${appId}/conditions/${conditionId}/edit`);
         return { data: updatedCondition };
     } catch (error) {
         console.error("Failed to update condition:", error);
