@@ -61,7 +61,7 @@ export function TagInput({ value: tags = [], onChange, placeholder, className, i
                 onChange={handleInputChange}
                 onKeyDown={handleInputKeyDown}
                 placeholder={tags.length > 0 ? "" : placeholder}
-                className="flex-1 border-none shadow-none focus-visible:ring-0 h-auto p-0 bg-transparent"
+                className="flex-1 border-0 shadow-none focus-visible:ring-0 h-auto p-0 bg-transparent"
                 {...props}
             />
         </div>
