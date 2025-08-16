@@ -12,81 +12,19 @@ import { randomUUID } from "crypto";
 
 export class TursoDataService implements DataService {
   private client: Client;
-  private schemaInitialized: boolean = false;
 
   constructor() {
+    if (!process.env.TURSO_DATABASE_URL || !process.env.TURSO_AUTH_TOKEN) {
+        throw new Error("Turso database URL and auth token are required.");
+    }
     this.client = createClient({
       url: process.env.TURSO_DATABASE_URL!,
       authToken: process.env.TURSO_AUTH_TOKEN!,
     });
-    this.initSchema().then(() => this.schemaInitialized = true);
-  }
-
-  private async ensureSchema() {
-    if (!this.schemaInitialized) {
-        await this.initSchema();
-        this.schemaInitialized = true;
-    }
-  }
-
-  private async initSchema() {
-    const schemaQueries = [
-      `CREATE TABLE IF NOT EXISTS users (
-        uid TEXT PRIMARY KEY,
-        email TEXT UNIQUE,
-        display_name TEXT,
-        photo_url TEXT,
-        role TEXT NOT NULL,
-        created_at DATETIME NOT NULL
-      );`,
-      `CREATE TABLE IF NOT EXISTS applications (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        package_name TEXT NOT NULL,
-        owner_id TEXT NOT NULL,
-        created_at DATETIME NOT NULL,
-        FOREIGN KEY (owner_id) REFERENCES users(uid) ON DELETE CASCADE
-      );`,
-      `CREATE TABLE IF NOT EXISTS application_users (
-        application_id TEXT NOT NULL,
-        user_email TEXT NOT NULL,
-        PRIMARY KEY (application_id, user_email),
-        FOREIGN KEY (application_id) REFERENCES applications(id) ON DELETE CASCADE
-      );`,
-      `CREATE TABLE IF NOT EXISTS releases (
-        id TEXT PRIMARY KEY,
-        application_id TEXT NOT NULL,
-        version_name TEXT NOT NULL,
-        version_code TEXT NOT NULL,
-        status TEXT NOT NULL,
-        created_at DATETIME NOT NULL,
-        FOREIGN KEY (application_id) REFERENCES applications(id) ON DELETE CASCADE
-      );`,
-      `CREATE TABLE IF NOT EXISTS conditions (
-          id TEXT PRIMARY KEY,
-          application_id TEXT NOT NULL,
-          name TEXT NOT NULL,
-          rules_countries TEXT,
-          rules_company_ids TEXT,
-          rules_driver_ids TEXT,
-          rules_vehicle_ids TEXT,
-          created_at DATETIME NOT NULL,
-          FOREIGN KEY (application_id) REFERENCES applications(id) ON DELETE CASCADE
-      );`,
-      `CREATE TABLE IF NOT EXISTS release_conditions (
-          release_id TEXT NOT NULL,
-          condition_id TEXT NOT NULL,
-          PRIMARY KEY (release_id, condition_id),
-          FOREIGN KEY (release_id) REFERENCES releases(id) ON DELETE CASCADE,
-          FOREIGN KEY (condition_id) REFERENCES conditions(id) ON DELETE CASCADE
-      );`
-    ];
-    await this.client.batch(schemaQueries, "write");
   }
 
   // Helper to convert row to Application with users
   private async rowToApplication(row: any): Promise<Application> {
-    await this.ensureSchema();
     const usersResult = await this.client.execute({
         sql: "SELECT user_email FROM application_users WHERE application_id = ?",
         args: [row.id]
@@ -103,7 +41,6 @@ export class TursoDataService implements DataService {
   }
 
   async createApp(appData: Omit<Application, "id" | "createdAt">): Promise<Application> {
-    await this.ensureSchema();
     const id = randomUUID();
     const createdAt = new Date();
     
@@ -122,7 +59,6 @@ export class TursoDataService implements DataService {
   }
 
   async getApp(id: string): Promise<Application | null> {
-    await this.ensureSchema();
     const result = await this.client.execute({
         sql: "SELECT * FROM applications WHERE id = ?",
         args: [id]
@@ -132,7 +68,6 @@ export class TursoDataService implements DataService {
   }
 
   async getAppsForUser(userEmail: string): Promise<Application[]> {
-     await this.ensureSchema();
      const result = await this.client.execute({
         sql: `SELECT a.* FROM applications a
               JOIN application_users au ON a.id = au.application_id
@@ -144,7 +79,6 @@ export class TursoDataService implements DataService {
   }
 
   async updateApp(id: string, updates: Partial<Omit<Application, "id" | "ownerId" | "createdAt">>): Promise<Application> {
-    await this.ensureSchema();
     const tx = await this.client.transaction("write");
     try {
         if (updates.name && updates.packageName) {
@@ -177,7 +111,6 @@ export class TursoDataService implements DataService {
   }
   
   async deleteApp(id: string): Promise<void> {
-    await this.ensureSchema();
     await this.client.execute({
         sql: "DELETE FROM applications WHERE id = ?",
         args: [id]
@@ -185,7 +118,6 @@ export class TursoDataService implements DataService {
   }
 
   async findOrCreateUser(userData: Pick<UserProfile, "uid" | "email" | "displayName" | "photoURL">): Promise<UserProfile> {
-    await this.ensureSchema();
     const existingUser = await this.client.execute({
         sql: "SELECT * FROM users WHERE uid = ?",
         args: [userData.uid]
@@ -223,7 +155,6 @@ export class TursoDataService implements DataService {
   }
   
   async getSuperAdminsForApp(userEmails: string[]): Promise<UserProfile[]> {
-    await this.ensureSchema();
     if (userEmails.length === 0) return [];
     const placeholders = userEmails.map(() => '?').join(',');
     const result = await this.client.execute({
@@ -254,7 +185,6 @@ export class TursoDataService implements DataService {
   }
 
   async createRelease(appId: string, releaseData: Omit<Release, "id" | "createdAt" | "applicationId">): Promise<Release> {
-      await this.ensureSchema();
       const id = randomUUID();
       const createdAt = new Date();
       const { conditionIds, ...restData } = releaseData;
@@ -284,7 +214,6 @@ export class TursoDataService implements DataService {
   }
 
   async getRelease(appId: string, releaseId: string): Promise<Release | null> {
-      await this.ensureSchema();
       const releaseResult = await this.client.execute({
           sql: "SELECT * FROM releases WHERE id = ? AND application_id = ?",
           args: [releaseId, appId]
@@ -295,13 +224,12 @@ export class TursoDataService implements DataService {
           sql: "SELECT condition_id FROM release_conditions WHERE release_id = ?",
           args: [releaseId]
       });
-      const conditionIds = conditionsResult.rows.map((r: any) => r.condition_id);
+      const conditionIds = conditionsResult.rows.map((r: any) => r.condition_id as string);
 
       return this.rowToRelease(releaseResult.rows[0], conditionIds);
   }
 
   async getReleasesForApp(appId: string, page: number, limit: number): Promise<{ releases: Release[], total: number }> {
-      await this.ensureSchema();
       const totalResult = await this.client.execute({
           sql: "SELECT COUNT(*) as count FROM releases WHERE application_id = ?",
           args: [appId]
@@ -319,7 +247,7 @@ export class TursoDataService implements DataService {
               sql: "SELECT condition_id FROM release_conditions WHERE release_id = ?",
               args: [row.id]
           });
-          const conditionIds = conditionsResult.rows.map((r: any) => r.condition_id);
+          const conditionIds = conditionsResult.rows.map((r: any) => r.condition_id as string);
           return this.rowToRelease(row, conditionIds);
       }));
 
@@ -327,7 +255,6 @@ export class TursoDataService implements DataService {
   }
   
   async getActiveReleasesForApp(appId: string): Promise<{ releases: Release[]; total: number; }> {
-      await this.ensureSchema();
       const releasesResult = await this.client.execute({
           sql: "SELECT * FROM releases WHERE application_id = ? AND status = ? ORDER BY created_at DESC",
           args: [appId, ReleaseStatus.ACTIVE]
@@ -338,7 +265,7 @@ export class TursoDataService implements DataService {
               sql: "SELECT condition_id FROM release_conditions WHERE release_id = ?",
               args: [row.id]
           });
-          const conditionIds = conditionsResult.rows.map((r: any) => r.condition_id);
+          const conditionIds = conditionsResult.rows.map((r: any) => r.condition_id as string);
           return this.rowToRelease(row, conditionIds);
       }));
       
@@ -346,7 +273,6 @@ export class TursoDataService implements DataService {
   }
 
   async updateRelease(appId: string, releaseId: string, updates: Partial<Omit<Release, "id" | "createdAt" | "applicationId">>): Promise<Release> {
-      await this.ensureSchema();
       const { conditionIds, ...releaseUpdates } = updates;
 
       const tx = await this.client.transaction("write");
@@ -382,7 +308,6 @@ export class TursoDataService implements DataService {
   }
   
   async deleteRelease(appId: string, releaseId: string): Promise<void> {
-      await this.ensureSchema();
       await this.client.execute({
           sql: "DELETE FROM releases WHERE id = ? AND application_id = ?",
           args: [releaseId, appId]
@@ -405,7 +330,6 @@ export class TursoDataService implements DataService {
   }
 
   async createCondition(appId: string, conditionData: Omit<Condition, "id" | "createdAt" | "applicationId">): Promise<Condition> {
-      await this.ensureSchema();
       const id = randomUUID();
       const createdAt = new Date();
       const rules = conditionData.rules || {};
@@ -427,7 +351,6 @@ export class TursoDataService implements DataService {
   }
 
   async getCondition(appId: string, conditionId: string): Promise<Condition | null> {
-      await this.ensureSchema();
       const result = await this.client.execute({
           sql: "SELECT * FROM conditions WHERE id = ? AND application_id = ?",
           args: [conditionId, appId]
@@ -437,7 +360,6 @@ export class TursoDataService implements DataService {
   }
 
   async getConditionsForApp(appId: string): Promise<Condition[]> {
-      await this.ensureSchema();
       const result = await this.client.execute({
           sql: "SELECT * FROM conditions WHERE application_id = ? ORDER BY created_at DESC",
           args: [appId]
@@ -446,7 +368,6 @@ export class TursoDataService implements DataService {
   }
 
   async updateCondition(appId: string, conditionId: string, updates: Partial<Omit<Condition, "id" | "createdAt" | "applicationId">>): Promise<Condition> {
-      await this.ensureSchema();
       const rules = updates.rules || {};
       await this.client.execute({
           sql: `UPDATE conditions SET name = ?, rules_countries = ?, rules_company_ids = ?, rules_driver_ids = ?, rules_vehicle_ids = ?
@@ -467,7 +388,6 @@ export class TursoDataService implements DataService {
   }
 
   async deleteCondition(appId: string, conditionId: string): Promise<void> {
-      await this.ensureSchema();
       await this.client.execute({
           sql: "DELETE FROM conditions WHERE id = ? AND application_id = ?",
           args: [conditionId, appId]
