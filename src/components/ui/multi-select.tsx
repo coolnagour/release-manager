@@ -44,14 +44,6 @@ export function MultiSelect({
     [onChange, selected]
   );
 
-  const handleSelect = React.useCallback(
-    (optionValue: string) => {
-      setInputValue("");
-      onChange([...selected, optionValue]);
-    },
-    [onChange, selected]
-  );
-
   const handleKeyDown = React.useCallback(
     (e: React.KeyboardEvent<HTMLDivElement>) => {
       const input = inputRef.current;
@@ -130,8 +122,10 @@ export function MultiSelect({
                         e.preventDefault();
                         e.stopPropagation();
                       }}
-                      onSelect={() => handleSelect(option.value)}
-                      onClick={() => handleSelect(option.value)}
+                      onSelect={() => {
+                        setInputValue("")
+                        onChange([...selected, option.value])
+                      }}
                       className={"cursor-pointer"}
                     >
                       {option.label}
