@@ -64,7 +64,7 @@ export async function createApp(values: z.infer<typeof formSchema>, ownerId: str
   };
 }
 
-export async function updateApp(appId: string, values: z.infer<typeof formSchema>, userEmail: string, userRole: Role) {
+export async function updateApp(appId: string, values: z.infer<typeof formSchema>, user: UserProfile) {
     const validatedFields = formSchema.safeParse(values);
 
     if (!validatedFields.success) {
@@ -78,18 +78,18 @@ export async function updateApp(appId: string, values: z.infer<typeof formSchema
         return { error: "App not found." };
     }
     
-    if (!app.users.includes(userEmail)) {
+    if (!user.email || !app.users.includes(user.email)) {
         return { error: "Unauthorized." };
     }
 
     const { appName, packageName, users } = validatedFields.data;
     const newEmailList = users.split(",").map((email) => email.trim());
 
-    if (!newEmailList.includes(userEmail)) {
+    if (!newEmailList.includes(user.email)) {
         return { error: "You cannot remove yourself from an application." };
     }
 
-    if (userRole !== Role.SUPERADMIN) {
+    if (user.role !== Role.SUPERADMIN) {
         const originalSuperAdmins = await db.getSuperAdminsForApp(app.users);
         const originalSuperAdminEmails = originalSuperAdmins.map(u => u.email);
 
@@ -128,8 +128,8 @@ export async function updateApp(appId: string, values: z.infer<typeof formSchema
     };
 }
 
-export async function getApps(userEmail: string) {
-    return await db.getAppsForUser(userEmail);
+export async function getAppsForUser(userId: string) {
+    return await db.getAppsForUser(userId);
 }
 
 export async function getApp(appId: string): Promise<Application | null> {

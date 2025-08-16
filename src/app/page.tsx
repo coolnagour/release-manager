@@ -14,7 +14,7 @@ import { Rocket } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useEffect, useState } from "react";
 import { Application } from "@/types/application";
-import { getApps } from "@/actions/app-actions";
+import { getAppsForUser } from "@/actions/app-actions";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Role } from "@/types/roles";
 
@@ -24,8 +24,8 @@ function AppPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (user?.email) {
-      getApps(user.email)
+    if (user?.uid) {
+      getAppsForUser(user.uid)
         .then((userApps) => {
           setApps(userApps);
           setLoading(false);

@@ -105,7 +105,16 @@ export class FirestoreDataService implements DataService {
     return this.toApplication(doc);
   }
 
-  async getAppsForUser(userEmail: string): Promise<Application[]> {
+  async getAppsForUser(userId: string): Promise<Application[]> {
+    const userDoc = await usersCollection.doc(userId).get();
+    if (!userDoc.exists) {
+        return [];
+    }
+    const userEmail = userDoc.data()?.email;
+    if (!userEmail) {
+        return [];
+    }
+
     const snapshot = await appsCollection
       .where("users", "array-contains", userEmail)
       .orderBy("createdAt", "desc")

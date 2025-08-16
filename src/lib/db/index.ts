@@ -9,7 +9,7 @@ import { TursoDataService } from "./turso";
 export interface DataService {
   createApp(appData: Omit<Application, "id" | "createdAt">): Promise<Application>;
   getApp(id: string): Promise<Application | null>;
-  getAppsForUser(userEmail: string): Promise<Application[]>;
+  getAppsForUser(userId: string): Promise<Application[]>;
   updateApp(id: string, updates: Partial<Omit<Application, "id" | "ownerId" | "createdAt">>): Promise<Application>;
   deleteApp(id: string): Promise<void>;
   findOrCreateUser(user: Pick<UserProfile, "uid" | "email" | "displayName" | "photoURL">): Promise<UserProfile>;

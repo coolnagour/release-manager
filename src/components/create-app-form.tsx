@@ -53,12 +53,7 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
   const [newUserEmail, setNewUserEmail] = useState("");
 
   const isEditMode = !!application;
-  const isSuperAdmin = userProfile?.role === Role.SUPERADMIN;
-  const isAdmin = userProfile?.role === Role.ADMIN;
   
-  const canEditAppName = isSuperAdmin;
-  const canEditUsers = isSuperAdmin || isAdmin;
-
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -68,10 +63,10 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
     },
   });
 
-    const { fields, append, remove } = useFieldArray({
-        control: form.control,
-        name: "users",
-    });
+  const { fields, append, remove } = useFieldArray({
+      control: form.control,
+      name: "users",
+  });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     if (!user || !user.email || !userProfile) {
@@ -95,7 +90,7 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
 
     startTransition(async () => {
       const result = isEditMode
-        ? await updateApp(application.id, transformedValues, user.email!, userProfile.role)
+        ? await updateApp(application.id, transformedValues, userProfile)
         : await createApp(transformedValues, user.uid, user.email!);
         
       if (result.error) {
@@ -146,6 +141,9 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
     remove(index);
   }
 
+  const canEditAppName = userProfile?.role === Role.SUPERADMIN;
+  const canEditUsers = userProfile?.role === Role.SUPERADMIN || userProfile?.role === Role.ADMIN;
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 flex flex-col flex-1">
@@ -173,7 +171,7 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
                 <FormItem className="mt-8">
                 <FormLabel>Package Name</FormLabel>
                 <FormControl>
-                    <Input placeholder="com.example.app" {...field} disabled={isPending || (isEditMode && !isSuperAdmin)} />
+                    <Input placeholder="com.example.app" {...field} disabled={isPending || (isEditMode && !canEditAppName)} />
                 </FormControl>
                 <FormDescription>
                     The unique identifier for your app (e.g., Android package name or iOS bundle ID).
@@ -214,7 +212,7 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
             )}
             />
 
-            {(isSuperAdmin || isAdmin) && (
+            {canEditUsers && (
                 <Card className="mt-8">
                     <CardHeader>
                         <CardTitle className="text-lg">Add New User</CardTitle>
@@ -226,9 +224,9 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
                                 placeholder="user@example.com"
                                 value={newUserEmail}
                                 onChange={(e) => setNewUserEmail(e.target.value)}
-                                disabled={isPending || !canEditUsers}
+                                disabled={isPending}
                             />
-                            <Button type="button" onClick={handleAddUser} disabled={isPending || !canEditUsers}>Add User</Button>
+                            <Button type="button" onClick={handleAddUser} disabled={isPending}>Add User</Button>
                         </div>
                     </CardContent>
                 </Card>

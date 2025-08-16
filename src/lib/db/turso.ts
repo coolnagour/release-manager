@@ -93,15 +93,7 @@ export class TursoDataService implements DataService {
     return this.rowToApplication(result.rows[0]);
   }
 
-  async getAppsForUser(userEmail: string): Promise<Application[]> {
-     const userResult = await this.client.execute({
-        sql: "SELECT uid FROM users WHERE email = ?",
-        args: [userEmail]
-     });
-
-     if (userResult.rows.length === 0) return [];
-     const userId = userResult.rows[0].uid;
-
+  async getAppsForUser(userId: string): Promise<Application[]> {
      const result = await this.client.execute({
         sql: `SELECT a.* FROM applications a JOIN application_users au ON a.id = au.application_id WHERE au.user_id = ? ORDER BY a.created_at DESC`,
         args: [userId]
