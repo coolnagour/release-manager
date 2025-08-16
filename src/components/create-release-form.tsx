@@ -79,11 +79,11 @@ export function CreateReleaseForm({ appId, conditions, onReleaseCreated, initial
     const descriptions = [];
 
     if (combinedRules.countries.length > 0) {
-        descriptions.push(`in ${combinedRules.countries.length} selected countries`);
+        descriptions.push(`in countries: ${combinedRules.countries.join(', ')}`);
     }
 
     if (combinedRules.companyIds.length > 0) {
-        descriptions.push(`for ${combinedRules.companyIds.length} selected companies`);
+        descriptions.push(`for companies: ${combinedRules.companyIds.join(', ')}`);
     }
 
     if (combinedRules.driverIds.length > 0) {
