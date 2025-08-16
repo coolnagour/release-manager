@@ -4,6 +4,7 @@ import { Release } from "@/types/release";
 import { UserProfile } from "@/types/user-profile";
 import { FirestoreDataService } from "./firestore";
 import { Condition } from "@/types/condition";
+import { TursoDataService } from "./turso";
 
 export interface DataService {
   createApp(appData: Omit<Application, "id" | "createdAt">): Promise<Application>;
@@ -28,6 +29,15 @@ export interface DataService {
   deleteCondition(appId: string, conditionId: string): Promise<void>;
 }
 
-// For now, we are hardcoding the Firestore implementation.
-// In the future, we can use an environment variable to switch between implementations.
-export const db: DataService = new FirestoreDataService();
+
+function initializeDb(): DataService {
+    if (process.env.TURSO_DATABASE_URL && process.env.TURSO_AUTH_TOKEN) {
+        console.log("Using Turso database");
+        return new TursoDataService();
+    }
+    
+    console.log("Using Firestore database");
+    return new FirestoreDataService();
+}
+
+export const db: DataService = initializeDb();
