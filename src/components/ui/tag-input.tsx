@@ -41,13 +41,13 @@ export function TagInput({ value: tags = [], onChange, placeholder, className, i
 
   return (
     <div>
-        <div className={cn("flex flex-wrap items-center gap-2 rounded-md border border-input p-2", className)}>
+        <div className={cn("flex flex-wrap items-center gap-2 rounded-md border border-input p-2 text-sm ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2", className)}>
             {tags.map((tag, index) => (
                 <Badge key={index} variant="secondary">
                 {tag}
                 <button
                     type="button"
-                    className="ml-1 rounded-full outline-none"
+                    className="ml-1 rounded-full outline-none ring-offset-secondary"
                     onClick={() => removeTag(index)}
                     disabled={props.disabled}
                 >

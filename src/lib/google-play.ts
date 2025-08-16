@@ -54,7 +54,7 @@ export async function getInternalTrack(packageName: string) {
             editId,
             track: "internal",
         });
-console.log(track.data);
+console.log(track.data.releases.);
         return { data: track.data };
     } catch (error: any) {
         console.error("Failed to get internal track from Google Play:", error);
