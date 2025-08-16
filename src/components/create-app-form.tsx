@@ -64,7 +64,7 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
     defaultValues: {
       appName: application?.name || "",
       packageName: application?.packageName || "",
-      users: application?.users.map(email => ({ value: email })) || [],
+      users: application?.users.map(email => ({ value: email })) || (user?.email ? [{ value: user.email }] : []),
     },
   });
 
@@ -72,13 +72,6 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
         control: form.control,
         name: "users",
     });
-
-  useEffect(() => {
-    if (!isEditMode && user?.email && !fields.some(field => field.value === user.email)) {
-        append({ value: user.email });
-    }
-  }, [isEditMode, user, fields, append])
-
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     if (!user || !user.email || !userProfile) {

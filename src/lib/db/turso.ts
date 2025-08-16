@@ -89,10 +89,12 @@ export class TursoDataService implements DataService {
   async updateApp(id: string, updates: Partial<Omit<Application, "id" | "ownerId" | "createdAt">>): Promise<Application> {
     const tx = await this.client.transaction("write");
     try {
-        if (updates.name !== undefined && updates.packageName !== undefined) {
+        if (updates.name !== undefined || updates.packageName !== undefined) {
+             const currentApp = await this.getApp(id);
+             if (!currentApp) throw new Error("App not found for update");
             await tx.execute({
                 sql: "UPDATE applications SET name = ?, package_name = ? WHERE id = ?",
-                args: [updates.name, updates.packageName, id]
+                args: [updates.name ?? currentApp.name, updates.packageName ?? currentApp.packageName, id]
             });
         }
 
@@ -398,20 +400,19 @@ export class TursoDataService implements DataService {
       const { name, rules } = updates;
       const tx = await this.client.transaction("write");
       try {
-        const existing = await tx.execute({ sql: "SELECT * FROM conditions WHERE id = ? AND application_id = ?", args: [conditionId, appId]});
-        if (existing.rows.length === 0) {
+        const existingResult = await tx.execute({ sql: "SELECT * FROM conditions WHERE id = ? AND application_id = ?", args: [conditionId, appId]});
+        if (existingResult.rows.length === 0) {
             throw new Error("Condition not found");
         }
+        const existing = this.rowToCondition(existingResult.rows[0]);
 
-        const finalName = name ?? existing.rows[0].name;
+        const finalName = name ?? existing.name;
         
-        // This is complex because rules can be partial
-        const existingRules = this.rowToCondition(existing.rows[0]).rules;
         const finalRules = {
-            countries: rules?.countries ?? existingRules.countries,
-            companyIds: rules?.companyIds ?? existingRules.companyIds,
-            driverIds: rules?.driverIds ?? existingRules.driverIds,
-            vehicleIds: rules?.vehicleIds ?? existingRules.vehicleIds,
+            countries: rules?.countries ?? existing.rules.countries,
+            companyIds: rules?.companyIds ?? existing.rules.companyIds,
+            driverIds: rules?.driverIds ?? existing.rules.driverIds,
+            vehicleIds: rules?.vehicleIds ?? existing.rules.vehicleIds,
         };
 
         await tx.execute({
