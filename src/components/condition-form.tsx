@@ -21,12 +21,19 @@ import { useTransition } from "react";
 import { Condition, conditionSchema } from "@/types/condition";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { useRouter } from "next/navigation";
+import { MultiSelect } from "./ui/multi-select";
+import { countries } from "@/lib/countries";
 
 interface ConditionFormProps {
     appId: string;
     onConditionSubmitted?: () => void; // Optional now
     condition?: Condition | null;
 }
+
+const countryOptions = countries.map(country => ({
+    value: country.code,
+    label: country.name,
+}));
 
 // Custom Zod transformer to handle comma-separated strings
 const stringToArray = z.preprocess((val) => {
@@ -54,7 +61,7 @@ const numberStringToArray = z.preprocess((val) => {
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters."),
   rules: z.object({
-      country: stringToArray,
+      country: z.array(z.string()),
       companyId: numberStringToArray,
       driverId: stringToArray,
       vehicleId: stringToArray,
@@ -153,15 +160,15 @@ export function ConditionForm({ appId, onConditionSubmitted, condition }: Condit
                         <FormItem>
                             <FormLabel>Country</FormLabel>
                             <FormControl>
-                                <Input 
-                                    placeholder="e.g., US,CA,MX" 
-                                    {...field} 
-                                    value={Array.isArray(field.value) ? field.value.join(',') : ''}
-                                    onChange={e => field.onChange(e.target.value.toUpperCase().split(',').map(s => s.trim()))}
-                                    disabled={isPending} 
-                                />
+                               <MultiSelect
+                                    options={countryOptions}
+                                    selected={field.value}
+                                    onChange={field.onChange}
+                                    placeholder="Select countries..."
+                                    disabled={isPending}
+                               />
                             </FormControl>
-                            <FormDescription>Comma-separated list of ISO country codes.</FormDescription>
+                            <FormDescription>Select the countries to apply this condition to.</FormDescription>
                             <FormMessage />
                         </FormItem>
                     )}
