@@ -95,18 +95,17 @@ export function MultiSelect({
               </Badge>
             );
           })}
-          <form autoComplete="off" className="flex-1">
-            <CommandPrimitive.Input
-              ref={inputRef}
-              value={inputValue}
-              onValueChange={setInputValue}
-              onBlur={() => setOpen(false)}
-              onFocus={() => setOpen(true)}
-              placeholder={placeholder}
-              disabled={disabled}
-              className="ml-2 w-full bg-transparent outline-none placeholder:text-muted-foreground"
-            />
-          </form>
+          <CommandPrimitive.Input
+            ref={inputRef}
+            value={inputValue}
+            onValueChange={setInputValue}
+            onBlur={() => setOpen(false)}
+            onFocus={() => setOpen(true)}
+            placeholder={placeholder}
+            disabled={disabled}
+            autoComplete="off"
+            className="ml-2 flex-1 bg-transparent outline-none placeholder:text-muted-foreground"
+          />
         </div>
       </div>
       <div className="relative mt-2">
