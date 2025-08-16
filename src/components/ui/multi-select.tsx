@@ -85,7 +85,7 @@ export function MultiSelect({
                 {option?.label}
                 <button
                   type="button"
-                  className="ml-1 rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  className="ml-1 rounded-full outline-none"
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       handleUnselect(optionValue);
@@ -131,7 +131,6 @@ export function MultiSelect({
                         e.stopPropagation();
                       }}
                       onSelect={() => handleSelect(option.value)}
-                      onClick={() => handleSelect(option.value)}
                       className={"cursor-pointer"}
                     >
                       {option.label}
@@ -146,4 +145,3 @@ export function MultiSelect({
     </Command>
   );
 }
-
