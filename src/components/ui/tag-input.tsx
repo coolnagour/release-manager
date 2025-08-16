@@ -47,7 +47,7 @@ export function TagInput({ value: tags = [], onChange, placeholder, className, i
                 {tag}
                 <button
                     type="button"
-                    className="ml-1 rounded-full outline-none ring-offset-secondary"
+                    className="ml-1 rounded-full outline-none"
                     onClick={() => removeTag(index)}
                     disabled={props.disabled}
                 >
@@ -61,7 +61,7 @@ export function TagInput({ value: tags = [], onChange, placeholder, className, i
                 onChange={handleInputChange}
                 onKeyDown={handleInputKeyDown}
                 placeholder={tags.length > 0 ? "" : placeholder}
-                className="flex-1 border-0 shadow-none focus-visible:ring-0 h-auto p-0 bg-transparent"
+                className="flex-1 border-0 shadow-none focus-visible:ring-0 h-auto p-0 bg-transparent focus-visible:ring-offset-0"
                 {...props}
             />
         </div>
