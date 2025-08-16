@@ -156,14 +156,13 @@ export function ReleaseEvaluator({ appId, releaseId }: ReleaseEvaluatorProps) {
             render={({ field }) => (
                 <FormItem>
                 <FormLabel>Country</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isPending}>
+                <Select onValueChange={field.onChange} value={field.value} disabled={isPending}>
                     <FormControl>
                         <SelectTrigger>
-                            <SelectValue placeholder="Select a country" />
+                            <SelectValue placeholder="Any Country" />
                         </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                        <SelectItem value="">Any Country</SelectItem>
                         {countries.map((country) => (
                             <SelectItem key={country.code} value={country.code}>
                                 {country.name}
@@ -182,7 +181,7 @@ export function ReleaseEvaluator({ appId, releaseId }: ReleaseEvaluatorProps) {
                 <FormItem>
                 <FormLabel>Company ID</FormLabel>
                 <FormControl>
-                    <Input type="number" placeholder="e.g., 12345" {...field} disabled={isPending} />
+                    <Input type="number" placeholder="e.g., 12345" {...field} value={field.value ?? ""} disabled={isPending} />
                 </FormControl>
                 <FormMessage />
                 </FormItem>
@@ -195,7 +194,7 @@ export function ReleaseEvaluator({ appId, releaseId }: ReleaseEvaluatorProps) {
                 <FormItem>
                 <FormLabel>Driver ID</FormLabel>
                 <FormControl>
-                    <Input placeholder="e.g., driver-abc" {...field} disabled={isPending} />
+                    <Input placeholder="e.g., driver-abc" {...field} value={field.value ?? ""} disabled={isPending} />
                 </FormControl>
                 <FormMessage />
                 </FormItem>
@@ -208,7 +207,7 @@ export function ReleaseEvaluator({ appId, releaseId }: ReleaseEvaluatorProps) {
                 <FormItem>
                 <FormLabel>Vehicle ID</FormLabel>
                 <FormControl>
-                    <Input placeholder="e.g., vehicle-xyz" {...field} disabled={isPending} />
+                    <Input placeholder="e.g., vehicle-xyz" {...field} value={field.value ?? ""} disabled={isPending} />
                 </FormControl>
                 <FormMessage />
                 </FormItem>
