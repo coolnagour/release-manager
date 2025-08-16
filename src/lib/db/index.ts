@@ -3,7 +3,7 @@ import { Application } from "@/types/application";
 import { Release } from "@/types/release";
 import { UserProfile } from "@/types/user-profile";
 import { Condition } from "@/types/condition";
-import { DrizzleDataService } from "./drizzle";
+import { FirestoreDataService } from "./firestore";
 
 export interface DataService {
   createApp(appData: Omit<Application, "id" | "createdAt">): Promise<Application>;
@@ -29,12 +29,8 @@ export interface DataService {
 }
 
 function initializeDb(): DataService {
-    if (process.env.TURSO_DATABASE_URL && process.env.TURSO_AUTH_TOKEN) {
-        return new DrizzleDataService();
-    }
-    
-    // Fallback or error if you want to enforce having a DB
-    throw new Error("Database environment variables are not set.");
+    // For now, we will default to Firestore.
+    return new FirestoreDataService();
 }
 
 export const db: DataService = initializeDb();

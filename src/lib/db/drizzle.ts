@@ -36,6 +36,18 @@ export class DrizzleDataService implements DataService {
       return users.map(u => u.email).filter((e): e is string => e !== null);
   }
 
+  private async getUsersFromEmails(emails: string[]): Promise<UserProfile[]> {
+      if (emails.length === 0) return [];
+      const users = await this.db.query.users.findMany({
+          where: inArray(schema.users.email, emails)
+      });
+      return users.map(u => ({
+          ...u,
+          displayName: u.displayName,
+          photoURL: u.photoUrl,
+      }));
+  }
+
   async createApp(appData: Omit<Application, "id" | "createdAt">): Promise<Application> {
     const id = randomUUID();
     const createdAt = new Date();
@@ -182,18 +194,6 @@ export class DrizzleDataService implements DataService {
     };
   }
   
-  private async getUsersFromEmails(emails: string[]): Promise<UserProfile[]> {
-      if (emails.length === 0) return [];
-      const users = await this.db.query.users.findMany({
-          where: inArray(schema.users.email, emails)
-      });
-      return users.map(u => ({
-          ...u,
-          displayName: u.displayName,
-          photoURL: u.photoUrl,
-      }));
-  }
-
   async getSuperAdminsForApp(userIds: string[]): Promise<UserProfile[]> {
     if (userIds.length === 0) return [];
     const superAdmins = await this.db.query.users.findMany({
