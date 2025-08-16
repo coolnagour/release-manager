@@ -2,9 +2,8 @@
 import { Application } from "@/types/application";
 import { Release } from "@/types/release";
 import { UserProfile } from "@/types/user-profile";
-import { FirestoreDataService } from "./firestore";
 import { Condition } from "@/types/condition";
-import { TursoDataService } from "./turso";
+import { DrizzleDataService } from "./drizzle";
 
 export interface DataService {
   createApp(appData: Omit<Application, "id" | "createdAt">): Promise<Application>;
@@ -13,7 +12,7 @@ export interface DataService {
   updateApp(id: string, updates: Partial<Omit<Application, "id" | "ownerId" | "createdAt">>): Promise<Application>;
   deleteApp(id: string): Promise<void>;
   findOrCreateUser(user: Pick<UserProfile, "uid" | "email" | "displayName" | "photoURL">): Promise<UserProfile>;
-  getSuperAdminsForApp(userEmails: string[]): Promise<UserProfile[]>;
+  getSuperAdminsForApp(userIds: string[]): Promise<UserProfile[]>;
 
   createRelease(appId: string, releaseData: Omit<Release, "id" | "createdAt" | "applicationId">): Promise<Release>;
   getRelease(appId: string, releaseId: string): Promise<Release | null>;
@@ -29,15 +28,14 @@ export interface DataService {
   deleteCondition(appId: string, conditionId: string): Promise<void>;
 }
 
-
 function initializeDb(): DataService {
     if (process.env.TURSO_DATABASE_URL && process.env.TURSO_AUTH_TOKEN) {
-        console.log("Using Turso database");
-        return new TursoDataService();
+        console.log("Using Drizzle with Turso database");
+        return new DrizzleDataService();
     }
     
-    console.log("Using Firestore database");
-    return new FirestoreDataService();
+    // Fallback or error if you want to enforce having a DB
+    throw new Error("Database environment variables are not set.");
 }
 
 export const db: DataService = initializeDb();

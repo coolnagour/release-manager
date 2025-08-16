@@ -172,12 +172,12 @@ export class FirestoreDataService implements DataService {
     return this.toUserProfile(createdDoc);
   }
 
-  async getSuperAdminsForApp(userEmails: string[]): Promise<UserProfile[]> {
-    if (userEmails.length === 0) {
+  async getSuperAdminsForApp(userIds: string[]): Promise<UserProfile[]> {
+    if (userIds.length === 0) {
         return [];
     }
     const snapshot = await usersCollection
-        .where('email', 'in', userEmails)
+        .where('uid', 'in', userIds)
         .where('role', '==', Role.SUPERADMIN)
         .get();
 
