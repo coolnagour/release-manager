@@ -22,9 +22,9 @@ import { Release } from "@/types/release";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { CheckCircle, XCircle, Terminal, Info } from "lucide-react";
 import { countries } from "@/lib/countries";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Card } from "./ui/card";
 import Link from "next/link";
+import { Combobox } from "./ui/combobox";
 
 const formSchema = z.object({
   country: z.string().optional(),
@@ -39,6 +39,11 @@ interface ReleaseEvaluatorProps {
     appId: string;
     releaseId?: string; // If present, evaluates a specific release. Otherwise, finds the latest.
 }
+
+const countryOptions = countries.map(country => ({
+    value: country.code,
+    label: country.name,
+}));
 
 export function ReleaseEvaluator({ appId, releaseId }: ReleaseEvaluatorProps) {
   const { toast } = useToast();
@@ -151,28 +156,25 @@ export function ReleaseEvaluator({ appId, releaseId }: ReleaseEvaluatorProps) {
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField
-            control={form.control}
-            name="country"
-            render={({ field }) => (
-                <FormItem>
-                <FormLabel>Country</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value} disabled={isPending}>
-                    <FormControl>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Any Country" />
-                        </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                        {countries.map((country) => (
-                            <SelectItem key={country.code} value={country.code}>
-                                {country.name}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-                <FormMessage />
-                </FormItem>
-            )}
+              control={form.control}
+              name="country"
+              render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                      <FormLabel>Country</FormLabel>
+                      <FormControl>
+                          <Combobox
+                              options={countryOptions}
+                              value={field.value}
+                              onChange={field.onChange}
+                              placeholder="Any Country"
+                              searchPlaceholder="Search country..."
+                              emptyResultText="No country found."
+                              disabled={isPending}
+                          />
+                      </FormControl>
+                      <FormMessage />
+                  </FormItem>
+              )}
             />
             <FormField
             control={form.control}
