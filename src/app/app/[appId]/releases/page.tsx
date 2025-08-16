@@ -6,22 +6,13 @@ import {
   CardContent,
   CardFooter,
 } from "@/components/ui/card";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { Release } from "@/types/release";
 import { getReleasesForApp, deleteRelease, getInternalTrackVersionCodes } from "@/actions/release-actions";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MoreHorizontal, PlusCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { CreateReleaseForm } from "@/components/create-release-form";
 import { useAuth } from "@/contexts/auth-context";
 import { Role } from "@/types/roles";
 import {
@@ -41,7 +32,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { EditReleaseForm } from "@/components/edit-release-form";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -51,119 +41,80 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast";
 import { getApp } from "@/actions/app-actions";
 import { Application } from "@/types/application";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal } from "lucide-react";
+import Link from "next/link";
 
 
 const RELEASES_PER_PAGE = 10;
 
 function ReleasesPage() {
   const params = useParams();
+  const router = useRouter();
   const { userProfile } = useAuth();
   const { toast } = useToast();
   const [releases, setReleases] = useState<Release[]>([]);
   const [totalReleases, setTotalReleases] = useState(0);
   const [loading, setLoading] = useState(true);
   const [isPending, startTransition] = useTransition();
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [selectedRelease, setSelectedRelease] = useState<Release | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [app, setApp] = useState<Application | null>(null);
   const [untrackedVCs, setUntrackedVCs] = useState<(string|number)[]>([]);
   const [googlePlayError, setGooglePlayError] = useState<string | null>(null);
-  const [versionCodeToCreate, setVersionCodeToCreate] = useState<string | undefined>();
-
+  
   const appId = Array.isArray(params.appId) ? params.appId[0] : params.appId;
 
   const canCreateRelease = userProfile?.role === Role.SUPERADMIN || userProfile?.role === Role.ADMIN;
-
-  useEffect(() => {
+  
+  const fetchReleasesAndPlayData = () => {
     if (appId) {
       setLoading(true);
-      
-      const appPromise = getApp(appId).then(appData => {
-        setApp(appData);
-        if (appData?.packageName) {
-            return getInternalTrackVersionCodes(appData.packageName);
-        }
-        return Promise.resolve({ data: [] });
-      });
-
-      const releasesPromise = getReleasesForApp(appId, currentPage, RELEASES_PER_PAGE);
-
-      Promise.all([appPromise, releasesPromise]).then(([playResult, releasesData]) => {
-        setReleases(releasesData.releases);
-        setTotalReleases(releasesData.total);
-
-        if (playResult.error) {
-            setGooglePlayError(playResult.error);
-        } else if (playResult.data) {
-            const playStoreVCs = playResult.data;
-            const existingVCs = new Set(releasesData.releases.map(r => parseInt(r.versionCode, 10)));
-            const untracked = playStoreVCs.filter(vc => !existingVCs.has(Number(vc)));
-            setUntrackedVCs(untracked);
-        }
-        
-      }).catch(err => {
-        console.error("Failed to fetch data", err);
-        setGooglePlayError("Failed to load release or Google Play data.");
-      }).finally(() => {
-        setLoading(false);
-      });
-    }
-  }, [appId, currentPage]);
-
-  const fetchReleases = () => {
-     if (appId) {
-      setLoading(true);
       startTransition(() => {
-        getReleasesForApp(appId, currentPage, RELEASES_PER_PAGE)
-          .then((data) => {
-            setReleases(data.releases);
-            setTotalReleases(data.total);
-            const totalPages = Math.ceil(data.total / RELEASES_PER_PAGE);
-            if(currentPage > totalPages && totalPages > 0) {
-              setCurrentPage(totalPages);
-            }
-             // Re-calculate untracked VCs
-            const existingVCs = new Set(data.releases.map(r => parseInt(r.versionCode, 10)));
-            setUntrackedVCs(prev => prev.filter(vc => !existingVCs.has(Number(vc))));
+        const appPromise = getApp(appId).then(appData => {
+          setApp(appData);
+          if (appData?.packageName) {
+              return getInternalTrackVersionCodes(appData.packageName);
+          }
+          return Promise.resolve({ data: [] });
+        });
 
-          })
-          .finally(() => {
-            setLoading(false);
-          });
+        const releasesPromise = getReleasesForApp(appId, currentPage, RELEASES_PER_PAGE);
+
+        Promise.all([appPromise, releasesPromise]).then(([playResult, releasesData]) => {
+          setReleases(releasesData.releases);
+          setTotalReleases(releasesData.total);
+
+          if (playResult.error) {
+              setGooglePlayError(playResult.error);
+          } else if (playResult.data) {
+              const playStoreVCs = playResult.data;
+              const existingVCs = new Set(releasesData.releases.map(r => parseInt(r.versionCode, 10)));
+              const untracked = playStoreVCs.filter(vc => !existingVCs.has(Number(vc)));
+              setUntrackedVCs(untracked);
+          }
+          
+        }).catch(err => {
+          console.error("Failed to fetch data", err);
+          setGooglePlayError("Failed to load release or Google Play data.");
+        }).finally(() => {
+          setLoading(false);
+        });
       })
     }
   }
 
-  const handleReleaseCreated = (newRelease: Release) => {
-    fetchReleases();
-    setIsCreateDialogOpen(false);
-    setVersionCodeToCreate(undefined);
-  }
-
-  const handleReleaseUpdated = (updatedRelease: Release) => {
-    setReleases(releases.map(r => r.id === updatedRelease.id ? updatedRelease : r));
-    setIsEditDialogOpen(false);
-    setSelectedRelease(null);
-  }
-
-  const handleEditClick = (release: Release) => {
-    setSelectedRelease(release);
-    setIsEditDialogOpen(true);
-  }
+  useEffect(() => {
+    fetchReleasesAndPlayData();
+  }, [appId, currentPage]);
 
   const handleDeleteClick = async (releaseId: string) => {
     const result = await deleteRelease(appId, releaseId);
     if(result.success) {
-      fetchReleases();
+      fetchReleasesAndPlayData(); // Refetch all data
       toast({
         title: "Release Deleted",
         description: "The release has been successfully deleted.",
@@ -177,12 +128,6 @@ function ReleasesPage() {
     }
   }
   
-  const handleCreateFromVC = (vc: string | number) => {
-    setVersionCodeToCreate(String(vc));
-    setIsCreateDialogOpen(true);
-  }
-
-
   const getBadgeVariant = (status: string) => {
     switch (status) {
         case 'active':
@@ -213,28 +158,12 @@ function ReleasesPage() {
           </p>
         </div>
         {canCreateRelease && (
-          <Dialog open={isCreateDialogOpen} onOpenChange={(open) => {
-                setIsCreateDialogOpen(open);
-                if (!open) {
-                    setVersionCodeToCreate(undefined);
-                }
-            }}>
-            <DialogTrigger asChild>
-              <Button style={{ backgroundColor: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))" }}>
+            <Button asChild style={{ backgroundColor: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))" }}>
+              <Link href={`/app/${appId}/releases/new`}>
                 <PlusCircle className="mr-2 h-4 w-4" />
                 New Release
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
-              <DialogHeader>
-                <DialogTitle>Create New Release</DialogTitle>
-                <DialogDescription>
-                  Enter the details for your new release.
-                </DialogDescription>
-              </DialogHeader>
-              <CreateReleaseForm appId={appId} onReleaseCreated={handleReleaseCreated} initialVersionCode={versionCodeToCreate} />
-            </DialogContent>
-          </Dialog>
+              </Link>
+            </Button>
         )}
       </div>
       
@@ -254,8 +183,10 @@ function ReleasesPage() {
                 The following version codes from the internal track are not in the release manager. Click to add them.
                  <div className="flex flex-wrap gap-2 mt-2">
                     {untrackedVCs.map(vc => (
-                        <Button key={vc} variant="outline" size="sm" onClick={() => handleCreateFromVC(vc)}>
-                            {vc}
+                        <Button key={vc} variant="outline" size="sm" asChild>
+                           <Link href={`/app/${appId}/releases/new?versionCode=${vc}`}>
+                             {String(vc)}
+                           </Link>
                         </Button>
                     ))}
                 </div>
@@ -303,7 +234,7 @@ function ReleasesPage() {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem onClick={() => handleEditClick(release)}>
+                            <DropdownMenuItem onClick={() => router.push(`/app/${appId}/releases/${release.id}/edit`)}>
                               Edit
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
@@ -364,24 +295,6 @@ function ReleasesPage() {
             </CardFooter>
         )}
       </Card>
-      
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-                <DialogTitle>Edit Release</DialogTitle>
-                <DialogDescription>
-                    Update the details for your release.
-                </DialogDescription>
-            </DialogHeader>
-            {selectedRelease && (
-                <EditReleaseForm
-                    appId={appId}
-                    release={selectedRelease}
-                    onReleaseUpdated={handleReleaseUpdated}
-                />
-            )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
