@@ -3,6 +3,7 @@ import { createClient } from "@libsql/client";
 import "dotenv/config";
 
 const schemaQueries = [
+    `DROP TABLE IF EXISTS application_users;`,
     `CREATE TABLE IF NOT EXISTS users (
       uid TEXT PRIMARY KEY,
       email TEXT UNIQUE NOT NULL,
