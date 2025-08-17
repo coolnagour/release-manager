@@ -96,26 +96,28 @@ export class DrizzleDataService implements DataService {
   }
 
   async getAppsForUser(userId: string): Promise<Application[]> {
-    const userApps = await this.db.select({ id: schema.applications.id })
-        .from(schema.applicationUsers)
-        .where(eq(schema.applicationUsers.userId, userId))
-        .innerJoin(schema.applications, eq(schema.applicationUsers.applicationId, schema.applications.id))
-        .orderBy(desc(schema.applications.createdAt));
-    
-    const appIds = userApps.map(app => app.id);
-    if (appIds.length === 0) return [];
-    
-    const apps = await this.db.query.applications.findMany({
-      where: inArray(schema.applications.id, appIds),
-      orderBy: desc(schema.applications.createdAt)
+    const userWithApps = await this.db.query.users.findFirst({
+        where: eq(schema.users.uid, userId),
+        with: {
+            applications: {
+                with: {
+                    application: true
+                }
+            }
+        },
     });
 
+    if (!userWithApps || !userWithApps.applications) {
+        return [];
+    }
+
+    const appsData = userWithApps.applications.map(a => a.application).sort((a,b) => b.createdAt.getTime() - a.createdAt.getTime());
+
     const result: Application[] = [];
-    for(const app of apps) {
+    for (const app of appsData) {
         const users = await this.getAppUserEmails(app.id);
         result.push({ ...app, users });
     }
-
     return result;
   }
 
