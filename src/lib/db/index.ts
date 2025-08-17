@@ -18,6 +18,7 @@ export interface DataService {
   getRelease(appId: string, releaseId: string): Promise<Release | null>;
   getReleasesForApp(appId: string, page: number, limit: number): Promise<{ releases: Release[], total: number }>;
   getActiveReleasesForApp(appId: string): Promise<{ releases: Release[], total: number }>;
+  getAvailableReleasesForContext(appId: string, context: { country?: string; companyId?: number; driverId?: string; vehicleId?: string }): Promise<Release[]>;
   updateRelease(appId: string, releaseId: string, updates: Partial<Omit<Release, "id" | "createdAt" | "applicationId">>): Promise<Release>;
   deleteRelease(appId: string, releaseId: string): Promise<void>;
 

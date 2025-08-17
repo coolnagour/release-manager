@@ -12,18 +12,18 @@ const formSchema = z.object({
   versionName: z.string().min(1, {
     message: "Version name is required.",
   }),
-  versionCode: z.string().min(1, {
-    message: "Version code is required.",
+  versionCode: z.number().int().positive({
+    message: "Version code must be a positive integer.",
   }),
   status: z.nativeEnum(ReleaseStatus),
   conditionIds: z.array(z.string()).default([]),
 });
 
 const evaluationContextSchema = z.object({
-    country: z.string().optional(),
-    companyId: z.number().optional(),
-    driverId: z.string().optional(),
-    vehicleId: z.string().optional(),
+    country: z.string(),
+    companyId: z.number(),
+    driverId: z.string(),
+    vehicleId: z.string(),
 });
 
 export type EvaluationContext = z.infer<typeof evaluationContextSchema>;
@@ -108,90 +108,35 @@ export async function getInternalTrackVersionCodes(packageName: string): Promise
     return { data: versionCodes || [] };
 }
 
-function isReleaseAvailableForContext(release: Release, context: EvaluationContext, allConditions: Condition[]): boolean {
-    if (release.conditionIds.length === 0) {
-        return true;
-    }
-
-    const releaseConditions = allConditions.filter(c => release.conditionIds.includes(c.id));
-
-    if (releaseConditions.length !== release.conditionIds.length) {
-        // A condition associated with the release was not found, treat as unavailable
-        return false;
-    }
-    
-    // The context must match the combined rules of ALL associated conditions.
-    // We can merge all rules into a single set for evaluation.
-    const combinedRules = {
-      countries: [...new Set(releaseConditions.flatMap(c => c.rules.countries))],
-      companyIds: [...new Set(releaseConditions.flatMap(c => c.rules.companyIds))],
-      driverIds: [...new Set(releaseConditions.flatMap(c => c.rules.driverIds))],
-      vehicleIds: [...new Set(releaseConditions.flatMap(c => c.rules.vehicleIds))],
-    };
-    
-    const countryMatch = combinedRules.countries.length === 0 || (context.country ? combinedRules.countries.includes(context.country) : false);
-    const companyMatch = combinedRules.companyIds.length === 0 || (context.companyId ? combinedRules.companyIds.includes(context.companyId) : false);
-    
-    // For driver/vehicle, the release is available if EITHER a driver rule OR a vehicle rule matches the context.
-    const driverMatch = combinedRules.driverIds.length === 0 || (context.driverId ? combinedRules.driverIds.includes(context.driverId) : false);
-    const vehicleMatch = combinedRules.vehicleIds.length === 0 || (context.vehicleId ? combinedRules.vehicleIds.includes(context.vehicleId) : false);
-
-    // If both driver and vehicle rules exist (from different conditions), we check if context matches either.
-    // If only one type of rule exists, the other is effectively "pass-through".
-    // If no driver or vehicle rules exist, it's a "pass-through".
-    const driverOrVehicleMatch = (combinedRules.driverIds.length > 0 || combinedRules.vehicleIds.length > 0)
-      ? (driverMatch && combinedRules.driverIds.length > 0) || (vehicleMatch && combinedRules.vehicleIds.length > 0)
-      : true;
-
-
-    // A special case: if both driver and vehicle rules are specified across all conditions,
-    // we need to be careful. The logic should be (driver rules pass) OR (vehicle rules pass).
-    // Let's refine the logic for driver/vehicle.
-    const hasDriverRules = combinedRules.driverIds.length > 0;
-    const hasVehicleRules = combinedRules.vehicleIds.length > 0;
-
-    let driverVehicleRuleResult = true; // Default to true if no rules specified.
-
-    if (hasDriverRules && hasVehicleRules) {
-        // If rules for both exist across different conditions, context must match one of them.
-        driverVehicleRuleResult = (context.driverId ? combinedRules.driverIds.includes(context.driverId) : false) || (context.vehicleId ? combinedRules.vehicleIds.includes(context.vehicleId) : false);
-    } else if (hasDriverRules) {
-        // Only driver rules specified.
-        driverVehicleRuleResult = context.driverId ? combinedRules.driverIds.includes(context.driverId) : false;
-    } else if (hasVehicleRules) {
-        // Only vehicle rules specified.
-        driverVehicleRuleResult = context.vehicleId ? combinedRules.vehicleIds.includes(context.vehicleId) : false;
-    }
-
-    return countryMatch && companyMatch && driverVehicleRuleResult;
-}
 
 export async function evaluateContext(appId: string, context: EvaluationContext): Promise<{data?: Release | null, error?: string}> {
     try {
-        const { releases } = await db.getActiveReleasesForApp(appId);
-        const allConditions = await db.getConditionsForApp(appId);
-
-        for (const release of releases) {
-            if (isReleaseAvailableForContext(release, context, allConditions)) {
-                return { data: release }; // Return the first (latest) matching release
-            }
-        }
-        return { data: null }; // No matching release found
+        // Use the new performant query method
+        const availableReleases = await db.getAvailableReleasesForContext(appId, context);
+        
+        // Return the first (latest) matching release, or null if none found
+        return { data: availableReleases.length > 0 ? availableReleases[0] : null };
     } catch (error) {
         console.error("Failed to evaluate context:", error);
         return { error: "An unexpected error occurred during evaluation." };
     }
 }
 
-export async function evaluateRelease(appId: string, releaseId: string, context: EvaluationContext): Promise<{data?: boolean, error?: string}> {
+export async function evaluateRelease(appId: string, releaseId: string, context: EvaluationContext): Promise<{data?: {release: Release, isAvailable: boolean, availableRelease: Release | null}, error?: string}> {
     try {
         const release = await db.getRelease(appId, releaseId);
-        if (!release || release.status !== ReleaseStatus.ACTIVE) {
-            return { data: false, error: "Release not found or is not active." };
+        if (!release) {
+            return { error: "Release not found." };
         }
-        const allConditions = await db.getConditionsForApp(appId);
-        const isAvailable = isReleaseAvailableForContext(release, context, allConditions);
-        return { data: isAvailable };
+        
+        // Get the release that would actually be available for this context
+        const availableReleases = await db.getAvailableReleasesForContext(appId, context);
+        const availableRelease = availableReleases.length > 0 ? availableReleases[0] : null;
+        
+        // Check if the specific release being evaluated is available
+        const isAvailable = release.status === ReleaseStatus.ACTIVE && availableReleases.some(r => r.id === releaseId);
+        
+        return { data: { release, isAvailable, availableRelease } };
     } catch (error) {
         console.error("Failed to evaluate release:", error);
         return { error: "An unexpected error occurred during evaluation." };

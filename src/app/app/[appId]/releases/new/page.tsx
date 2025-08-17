@@ -26,7 +26,8 @@ function NewReleasePage() {
   const [loadingConditions, setLoadingConditions] = useState(true);
 
   const appId = Array.isArray(params.appId) ? params.appId[0] : params.appId;
-  const versionCode = searchParams.get('versionCode');
+  const versionCodeParam = searchParams.get('versionCode');
+  const versionCode = versionCodeParam ? parseInt(versionCodeParam, 10) : undefined;
 
   useEffect(() => {
     if (!authLoading) {
@@ -85,7 +86,7 @@ function NewReleasePage() {
               <CreateReleaseForm 
                 appId={appId} 
                 conditions={conditions} 
-                initialVersionCode={versionCode || undefined}
+                initialVersionCode={versionCode}
               />
             </CardContent>
         </Card>

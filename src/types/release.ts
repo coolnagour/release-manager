@@ -10,7 +10,7 @@ export enum ReleaseStatus {
 export interface Release {
   id: string;
   versionName: string;
-  versionCode: string;
+  versionCode: number;
   status: ReleaseStatus;
   applicationId: string;
   createdAt: Date;

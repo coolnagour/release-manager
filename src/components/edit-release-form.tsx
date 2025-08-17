@@ -30,8 +30,8 @@ const formSchema = z.object({
   versionName: z.string().min(1, {
     message: "Version name must be at least 1 character.",
   }),
-  versionCode: z.string().min(1, {
-    message: "Version code must be at least 1 character.",
+  versionCode: z.coerce.number().int().positive({
+    message: "Version code must be a positive integer.",
   }),
   status: z.nativeEnum(ReleaseStatus),
   conditionIds: z.array(z.string()).default([]),
@@ -70,10 +70,10 @@ export function EditReleaseForm({ appId, release, conditions, onReleaseUpdated }
     const selectedConditions = conditions.filter(c => selectedConditionIds.includes(c.id));
 
     const combinedRules = {
-        countries: [...new Set(selectedConditions.flatMap(c => c.rules.countries || []))],
-        companyIds: [...new Set(selectedConditions.flatMap(c => c.rules.companyIds || []))],
-        driverIds: [...new Set(selectedConditions.flatMap(c => c.rules.driverIds || []))],
-        vehicleIds: [...new Set(selectedConditions.flatMap(c => c.rules.vehicleIds || []))],
+        countries: [...new Set(selectedConditions.flatMap(c => c.countries || []))],
+        companyIds: [...new Set(selectedConditions.flatMap(c => c.companies || []))],
+        driverIds: [...new Set(selectedConditions.flatMap(c => c.drivers || []))],
+        vehicleIds: [...new Set(selectedConditions.flatMap(c => c.vehicles || []))],
     };
     
     const descriptions = [];

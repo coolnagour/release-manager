@@ -11,7 +11,7 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "tsx src/lib/db/migrate.ts"
+    "db:migrate": "drizzle-kit migrate"
   },
   "dependencies": {
     "@genkit-ai/googleai": "^1.14.1",

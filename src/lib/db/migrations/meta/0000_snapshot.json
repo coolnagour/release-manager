@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "5553fb96-6dd1-4c38-8ff8-b491349d8676",
+  "id": "b822da3e-9981-43f6-8fc1-bbeafb4ec197",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "applications": {
@@ -145,33 +145,37 @@
           "notNull": true,
           "autoincrement": false
         },
-        "rules_countries": {
-          "name": "rules_countries",
+        "countries": {
+          "name": "countries",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
-          "autoincrement": false
+          "autoincrement": false,
+          "default": "'[]'"
         },
-        "rules_company_ids": {
-          "name": "rules_company_ids",
+        "companies": {
+          "name": "companies",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
-          "autoincrement": false
+          "autoincrement": false,
+          "default": "'[]'"
         },
-        "rules_driver_ids": {
-          "name": "rules_driver_ids",
+        "drivers": {
+          "name": "drivers",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
-          "autoincrement": false
+          "autoincrement": false,
+          "default": "'[]'"
         },
-        "rules_vehicle_ids": {
-          "name": "rules_vehicle_ids",
+        "vehicles": {
+          "name": "vehicles",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
-          "autoincrement": false
+          "autoincrement": false,
+          "default": "'[]'"
         },
         "created_at": {
           "name": "created_at",
@@ -227,7 +231,7 @@
         },
         "version_code": {
           "name": "version_code",
-          "type": "text",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false

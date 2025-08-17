@@ -19,10 +19,10 @@ CREATE TABLE `conditions` (
 	`id` text PRIMARY KEY NOT NULL,
 	`application_id` text NOT NULL,
 	`name` text NOT NULL,
-	`rules_countries` text,
-	`rules_company_ids` text,
-	`rules_driver_ids` text,
-	`rules_vehicle_ids` text,
+	`countries` text DEFAULT '[]',
+	`companies` text DEFAULT '[]',
+	`drivers` text DEFAULT '[]',
+	`vehicles` text DEFAULT '[]',
 	`created_at` integer DEFAULT (strftime('%s', 'now')) NOT NULL,
 	FOREIGN KEY (`application_id`) REFERENCES `applications`(`id`) ON UPDATE no action ON DELETE cascade
 );
@@ -31,7 +31,7 @@ CREATE TABLE `releases` (
 	`id` text PRIMARY KEY NOT NULL,
 	`application_id` text NOT NULL,
 	`version_name` text NOT NULL,
-	`version_code` text NOT NULL,
+	`version_code` integer NOT NULL,
 	`status` text DEFAULT 'active' NOT NULL,
 	`created_at` integer DEFAULT (strftime('%s', 'now')) NOT NULL,
 	FOREIGN KEY (`application_id`) REFERENCES `applications`(`id`) ON UPDATE no action ON DELETE cascade

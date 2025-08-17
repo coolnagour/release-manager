@@ -9,7 +9,7 @@ import { Role } from "@/types/roles";
 import { Release, ReleaseStatus } from "@/types/release";
 import { Condition } from "@/types/condition";
 import { randomUUID } from "crypto";
-import { and, count, desc, eq, inArray } from 'drizzle-orm';
+import { and, count, desc, eq, inArray, or, like, sql } from 'drizzle-orm';
 
 export class DrizzleDataService implements DataService {
   private client: Client;
@@ -313,6 +313,83 @@ export class DrizzleDataService implements DataService {
       return { releases, total: releases.length };
   }
 
+  async getAvailableReleasesForContext(appId: string, context: { country: string; companyId: number; driverId: string; vehicleId: string }): Promise<Release[]> {
+      // Use a performant SQL query with the normalized schema to find releases that match the context
+      // This implements the logic: A release is available if all its conditions match the context
+      
+      const query = `
+        SELECT DISTINCT r.id, r.application_id, r.version_name, r.version_code, r.status, r.created_at
+        FROM releases r
+        LEFT JOIN release_conditions rc ON r.id = rc.release_id
+        LEFT JOIN conditions c ON rc.condition_id = c.id
+        WHERE r.application_id = ? AND r.status = ?
+          AND (c.countries IS NULL OR c.countries = '[]' OR json_array_length(c.countries) = 0 OR json_extract(c.countries, '$') LIKE '%"' || ? || '"%')
+          AND (c.companies IS NULL OR c.companies = '[]' OR json_array_length(c.companies) = 0 OR json_extract(c.companies, '$') LIKE '%' || ? || '%')
+          AND  (c.drivers IS NULL OR c.drivers = '[]' OR json_array_length(c.drivers) = 0 OR json_extract(c.drivers, '$') LIKE '%"' || ? || '"%')
+          AND (c.vehicles IS NULL OR c.vehicles = '[]' OR json_array_length(c.vehicles) = 0 OR json_extract(c.vehicles, '$') LIKE '%"' || ? || '"%')
+        ORDER BY r.version_code DESC
+        LIMIT 1
+      `;
+
+      const params = [
+        appId, ReleaseStatus.ACTIVE,
+        context.country,  // Country param
+        context.companyId,  // Company param  
+        context.driverId,  // Driver param
+        context.vehicleId   // Vehicle param
+      ];
+
+      // Fill parameters into query for debugging
+      let filledQuery = query;
+      params.forEach((param) => {
+        const value = typeof param === 'string' ? `'${param}'` : param;
+        filledQuery = filledQuery.replace('?', String(value));
+      });
+
+      console.log('🔍 getAvailableReleasesForContext Query:', {
+        database: process.env.TURSO_DATABASE_URL,
+        query: filledQuery
+      });
+
+      // Execute with replicationSync to ensure fresh data from primary
+      const results = await this.client.execute({
+        sql: query,
+        args: params,
+      });
+      
+      console.log('📊 getAvailableReleasesForContext Results:', {
+        rowCount: results.rows.length,
+        rawRows: results.rows,
+        columns: results.columns,
+        executedQuery: filledQuery
+      });
+      
+      // Convert results to Release objects
+      const releases: Release[] = [];
+      for (const row of results.rows) {
+        // Results come as objects with named properties
+        const rowObj = row as any;
+        const releaseId = rowObj.id;
+        
+        // Get condition IDs for this release
+        const conditionResult = await this.db.select({ conditionId: schema.releaseConditions.conditionId })
+          .from(schema.releaseConditions)
+          .where(eq(schema.releaseConditions.releaseId, releaseId));
+        
+        releases.push({
+          id: releaseId,
+          applicationId: rowObj.application_id,
+          versionName: rowObj.version_name,
+          versionCode: rowObj.version_code,
+          status: rowObj.status as ReleaseStatus,
+          createdAt: new Date(rowObj.created_at * 1000), // Convert Unix timestamp to Date
+          conditionIds: conditionResult.map(cr => cr.conditionId),
+        });
+      }
+      
+      return releases;
+  }
+
   async updateRelease(appId: string, releaseId: string, updates: Partial<Omit<Release, "id" | "createdAt" | "applicationId">>): Promise<Release> {
       const { conditionIds, ...releaseUpdates } = updates;
 
@@ -353,12 +430,10 @@ export class DrizzleDataService implements DataService {
           id: row.id,
           applicationId: row.applicationId,
           name: row.name,
-          rules: {
-              countries: row.rulesCountries ? JSON.parse(row.rulesCountries) : [],
-              companyIds: row.rulesCompanyIds ? JSON.parse(row.rulesCompanyIds) : [],
-              driverIds: row.rulesDriverIds ? JSON.parse(row.rulesDriverIds) : [],
-              vehicleIds: row.rulesVehicleIds ? JSON.parse(row.rulesVehicleIds) : [],
-          },
+          countries: row.countries || [],
+          companies: row.companies || [],
+          drivers: row.drivers || [],
+          vehicles: row.vehicles || [],
           createdAt: row.createdAt,
       };
   }
@@ -366,18 +441,18 @@ export class DrizzleDataService implements DataService {
   async createCondition(appId: string, conditionData: Omit<Condition, "id" | "createdAt" | "applicationId">): Promise<Condition> {
       const id = randomUUID();
       const createdAt = new Date();
-      const rules = conditionData.rules || {};
       
       await this.db.insert(schema.conditions).values({
           id,
           applicationId: appId,
           name: conditionData.name,
-          rulesCountries: JSON.stringify(rules.countries || []),
-          rulesCompanyIds: JSON.stringify(rules.companyIds || []),
-          rulesDriverIds: JSON.stringify(rules.driverIds || []),
-          rulesVehicleIds: JSON.stringify(rules.vehicleIds || []),
+          countries: conditionData.countries || [],
+          companies: conditionData.companies || [],
+          drivers: conditionData.drivers || [],
+          vehicles: conditionData.vehicles || [],
           createdAt,
       });
+      
       return { id, applicationId: appId, createdAt, ...conditionData };
   }
 
@@ -401,26 +476,19 @@ export class DrizzleDataService implements DataService {
   }
 
   async updateCondition(appId: string, conditionId: string, updates: Partial<Omit<Condition, "id" | "createdAt" | "applicationId">>): Promise<Condition> {
-      const { name, rules } = updates;
       const existing = await this.getCondition(appId, conditionId);
       if(!existing) throw new Error("Condition not found");
 
-      const finalName = name ?? existing.name;
-      const finalRules = {
-            countries: rules?.countries ?? existing.rules.countries,
-            companyIds: rules?.companyIds ?? existing.rules.companyIds,
-            driverIds: rules?.driverIds ?? existing.rules.driverIds,
-            vehicleIds: rules?.vehicleIds ?? existing.rules.vehicleIds,
+      const updateData = {
+          name: updates.name ?? existing.name,
+          countries: updates.countries ?? existing.countries,
+          companies: updates.companies ?? existing.companies,
+          drivers: updates.drivers ?? existing.drivers,
+          vehicles: updates.vehicles ?? existing.vehicles,
       };
 
       await this.db.update(schema.conditions)
-          .set({
-              name: finalName,
-              rulesCountries: JSON.stringify(finalRules.countries),
-              rulesCompanyIds: JSON.stringify(finalRules.companyIds),
-              rulesDriverIds: JSON.stringify(finalRules.driverIds),
-              rulesVehicleIds: JSON.stringify(finalRules.vehicleIds),
-          })
+          .set(updateData)
           .where(and(eq(schema.conditions.id, conditionId), eq(schema.conditions.applicationId, appId)));
 
       const condition = await this.getCondition(appId, conditionId);

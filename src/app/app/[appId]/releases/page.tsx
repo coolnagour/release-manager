@@ -93,7 +93,7 @@ function ReleasesPage() {
               setGooglePlayError(playResult.error);
           } else if (playResult.data) {
               const playStoreVCs = playResult.data;
-              const existingVCs = new Set(releasesData.releases.map(r => parseInt(r.versionCode, 10)));
+              const existingVCs = new Set(releasesData.releases.map(r => r.versionCode));
               const untracked = playStoreVCs.filter(vc => !existingVCs.has(Number(vc)));
               setUntrackedVCs(untracked);
           }

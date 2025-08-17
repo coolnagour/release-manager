@@ -38,15 +38,13 @@ const countryOptions = countries.map(country => ({
 
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters."),
-  rules: z.object({
-      countries: z.array(z.string()),
-      companyIds: z.array(z.number()),
-      driverIds: z.array(z.string()),
-      vehicleIds: z.array(z.string()),
-  })
-}).refine(data => !(data.rules.driverIds.length > 0 && data.rules.vehicleIds.length > 0), {
+  countries: z.array(z.string()),
+  companies: z.array(z.number()),
+  drivers: z.array(z.string()),
+  vehicles: z.array(z.string()),
+}).refine(data => !(data.drivers.length > 0 && data.vehicles.length > 0), {
     message: "Drivers and Vehicles cannot be used at the same time.",
-    path: ["rules.driverIds"],
+    path: ["drivers"],
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -62,18 +60,16 @@ export function ConditionForm({ appId, onConditionSubmitted, condition }: Condit
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: condition?.name || "",
-      rules: {
-        countries: condition?.rules.countries || [],
-        companyIds: condition?.rules.companyIds || [],
-        driverIds: condition?.rules.driverIds || [],
-        vehicleIds: condition?.rules.vehicleIds || [],
-      },
+      countries: condition?.countries || [],
+      companies: condition?.companies || [],
+      drivers: condition?.drivers || [],
+      vehicles: condition?.vehicles || [],
     },
   });
 
   const { watch } = form;
-  const driverIds = watch("rules.driverIds");
-  const vehicleIds = watch("rules.vehicleIds");
+  const drivers = watch("drivers");
+  const vehicles = watch("vehicles");
   
   function onSubmit(values: FormValues) {
     startTransition(async () => {
@@ -140,7 +136,7 @@ export function ConditionForm({ appId, onConditionSubmitted, condition }: Condit
             <CardContent className="space-y-4 pt-6">
                  <FormField
                     control={form.control}
-                    name="rules.countries"
+                    name="countries"
                     render={({ field }) => (
                         <FormItem>
                             <FormLabel>Countries</FormLabel>
@@ -160,7 +156,7 @@ export function ConditionForm({ appId, onConditionSubmitted, condition }: Condit
                  />
                  <FormField
                     control={form.control}
-                    name="rules.companyIds"
+                    name="companies"
                     render={({ field }) => (
                         <FormItem>
                             <FormLabel>Companies</FormLabel>
@@ -180,7 +176,7 @@ export function ConditionForm({ appId, onConditionSubmitted, condition }: Condit
                  />
                  <FormField
                     control={form.control}
-                    name="rules.driverIds"
+                    name="drivers"
                     render={({ field }) => (
                         <FormItem>
                             <FormLabel>Drivers</FormLabel>
@@ -189,7 +185,7 @@ export function ConditionForm({ appId, onConditionSubmitted, condition }: Condit
                                     value={field.value}
                                     onChange={field.onChange}
                                     placeholder="Enter a driver ID and press Enter"
-                                    disabled={isPending || (vehicleIds && vehicleIds.length > 0)}
+                                    disabled={isPending || (vehicles && vehicles.length > 0)}
                                 />
                             </FormControl>
                             <FormDescription>List of driver IDs. Cannot be used with Vehicles.</FormDescription>
@@ -199,7 +195,7 @@ export function ConditionForm({ appId, onConditionSubmitted, condition }: Condit
                  />
                  <FormField
                     control={form.control}
-                    name="rules.vehicleIds"
+                    name="vehicles"
                     render={({ field }) => (
                         <FormItem>
                             <FormLabel>Vehicles</FormLabel>
@@ -208,7 +204,7 @@ export function ConditionForm({ appId, onConditionSubmitted, condition }: Condit
                                     value={field.value}
                                     onChange={field.onChange}
                                     placeholder="Enter a vehicle ID and press Enter"
-                                    disabled={isPending || (driverIds && driverIds.length > 0)}
+                                    disabled={isPending || (drivers && drivers.length > 0)}
                                 />
                             </FormControl>
                              <FormDescription>List of vehicle IDs. Cannot be used with Drivers.</FormDescription>

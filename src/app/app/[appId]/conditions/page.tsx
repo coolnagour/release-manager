@@ -89,13 +89,20 @@ function ConditionsPage() {
     }
   }
   
-  const getRuleSummary = (rules: Condition['rules']) => {
-    const activeRules = Object.entries(rules).filter(([, values]) => values.length > 0);
+  const getRuleSummary = (condition: Condition) => {
+    const rules = [
+      { key: 'countries', values: condition.countries },
+      { key: 'companies', values: condition.companies },
+      { key: 'drivers', values: condition.drivers },
+      { key: 'vehicles', values: condition.vehicles }
+    ];
+    
+    const activeRules = rules.filter(rule => rule.values.length > 0);
     if (activeRules.length === 0) return "All users";
     
-    return activeRules.map(([key, values]) => (
+    return activeRules.map(({ key, values }) => (
       <Badge key={key} variant="secondary" className="mr-1 mb-1 capitalize">
-        {key.replace(/Ids/g, '')}: {values.length}
+        {key}: {values.length}
       </Badge>
     ))
   }
@@ -144,7 +151,7 @@ function ConditionsPage() {
                   conditions.map((condition) => (
                     <TableRow key={condition.id}>
                       <TableCell className="font-medium">{condition.name}</TableCell>
-                      <TableCell>{getRuleSummary(condition.rules)}</TableCell>
+                      <TableCell>{getRuleSummary(condition)}</TableCell>
                       <TableCell>{new Date(condition.createdAt).toLocaleString()}</TableCell>
                        <TableCell className="text-right">
                         <DropdownMenu>

@@ -27,10 +27,10 @@ import Link from "next/link";
 import { Combobox } from "./ui/combobox";
 
 const formSchema = z.object({
-  country: z.string().optional(),
-  companyId: z.string().optional(),
-  driverId: z.string().optional(),
-  vehicleId: z.string().optional(),
+  country: z.string().min(1, "Country is required"),
+  companyId: z.string().min(1, "Company ID is required"),
+  driverId: z.string().min(1, "Driver ID is required"),
+  vehicleId: z.string().min(1, "Vehicle ID is required"),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -48,7 +48,7 @@ const countryOptions = countries.map(country => ({
 export function ReleaseEvaluator({ appId, releaseId }: ReleaseEvaluatorProps) {
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
-  const [result, setResult] = useState<{ type: 'success' | 'error' | 'info'; message: string, data?: Release | null | boolean } | null>(null);
+  const [result, setResult] = useState<{ type: 'success' | 'error' | 'info'; message: string, data?: Release | null | boolean | {release: Release, isAvailable: boolean, availableRelease: Release | null} } | null>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -61,17 +61,19 @@ export function ReleaseEvaluator({ appId, releaseId }: ReleaseEvaluatorProps) {
   });
 
   function onSubmit(values: FormValues) {
-    const context: EvaluationContext = {
-      country: values.country || undefined,
-      companyId: values.companyId ? parseInt(values.companyId, 10) : undefined,
-      driverId: values.driverId || undefined,
-      vehicleId: values.vehicleId || undefined,
-    };
+    const companyId = parseInt(values.companyId, 10);
     
-    if (context.companyId && isNaN(context.companyId)) {
+    if (isNaN(companyId)) {
         toast({ title: "Invalid Input", description: "Company ID must be a number.", variant: "destructive" });
         return;
     }
+    
+    const context: EvaluationContext = {
+      country: values.country,
+      companyId: companyId,
+      driverId: values.driverId,
+      vehicleId: values.vehicleId,
+    };
 
     setResult(null);
 
@@ -83,11 +85,11 @@ export function ReleaseEvaluator({ appId, releaseId }: ReleaseEvaluatorProps) {
       if (response.error) {
         setResult({ type: "error", message: response.error });
       } else if (releaseId) { // Specific release evaluation
-        const isAvailable = response.data;
-        if (isAvailable) {
-          setResult({ type: "success", message: "This release is available for the given context.", data: isAvailable });
+        const evaluationData = response.data as {release: Release, isAvailable: boolean, availableRelease: Release | null};
+        if (evaluationData.isAvailable) {
+          setResult({ type: "success", message: "This release is available for the given context.", data: evaluationData });
         } else {
-          setResult({ type: "info", message: "This release is NOT available for the given context.", data: isAvailable });
+          setResult({ type: "info", message: "This release is NOT available for the given context.", data: evaluationData });
         }
       } else { // Latest release evaluation
         const latestRelease = response.data;
@@ -114,12 +116,49 @@ export function ReleaseEvaluator({ appId, releaseId }: ReleaseEvaluatorProps) {
     }
 
     if (releaseId) { // Specific release mode
+      const evaluationData = result.data as {release: Release, isAvailable: boolean, availableRelease: Release | null};
+      const { release, isAvailable, availableRelease } = evaluationData;
+      
       return (
-         <Alert variant={result.data ? "default" : "destructive"} className={result.data ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800" : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"}>
-            {result.data ? <CheckCircle className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
-            <AlertTitle>{result.data ? 'Available' : 'Not Available'}</AlertTitle>
-            <AlertDescription>{result.message}</AlertDescription>
-        </Alert>
+        <div className="space-y-4">
+          <Alert variant={isAvailable ? "default" : "destructive"} className={isAvailable ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800" : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"}>
+            {isAvailable ? <CheckCircle className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+            <AlertTitle>Release Being Evaluated: {isAvailable ? 'Available' : 'Not Available'}</AlertTitle>
+            <AlertDescription>
+              Release <span className="font-bold">{release.versionName}</span> (Code: {release.versionCode}) {release.status !== 'active' ? `is ${release.status} and` : 'is'} {isAvailable ? 'available' : 'not available'} for the given context.
+              <div className="mt-2">
+                <Button asChild variant="outline" size="sm">
+                  <Link href={`/app/${appId}/releases/${release.id}/edit`}>View This Release</Link>
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+          
+          {availableRelease ? (
+            <Alert className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+              <Info className="h-4 w-4" />
+              <AlertTitle>Available Release for This Context</AlertTitle>
+              <AlertDescription>
+                The release that would be available for this context is <span className="font-bold">{availableRelease.versionName}</span> (Code: {availableRelease.versionCode}).
+                {availableRelease.id !== release.id && (
+                  <div className="mt-2">
+                    <Button asChild variant="outline" size="sm">
+                      <Link href={`/app/${appId}/releases/${availableRelease.id}/edit`}>View Available Release</Link>
+                    </Button>
+                  </div>
+                )}
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <Alert>
+              <Info className="h-4 w-4" />
+              <AlertTitle>No Available Release</AlertTitle>
+              <AlertDescription>
+                No release is available for this context.
+              </AlertDescription>
+            </Alert>
+          )}
+        </div>
       )
     }
 
@@ -166,7 +205,7 @@ export function ReleaseEvaluator({ appId, releaseId }: ReleaseEvaluatorProps) {
                               options={countryOptions}
                               value={field.value}
                               onChange={field.onChange}
-                              placeholder="Any Country"
+                              placeholder="Select Country *"
                               searchPlaceholder="Search country..."
                               emptyResultText="No country found."
                               disabled={isPending}
@@ -181,7 +220,7 @@ export function ReleaseEvaluator({ appId, releaseId }: ReleaseEvaluatorProps) {
             name="companyId"
             render={({ field }) => (
                 <FormItem>
-                <FormLabel>Company ID</FormLabel>
+                <FormLabel>Company ID *</FormLabel>
                 <FormControl>
                     <Input type="number" placeholder="e.g., 12345" {...field} value={field.value ?? ""} disabled={isPending} />
                 </FormControl>
@@ -194,7 +233,7 @@ export function ReleaseEvaluator({ appId, releaseId }: ReleaseEvaluatorProps) {
             name="driverId"
             render={({ field }) => (
                 <FormItem>
-                <FormLabel>Driver ID</FormLabel>
+                <FormLabel>Driver ID *</FormLabel>
                 <FormControl>
                     <Input placeholder="e.g., driver-abc" {...field} value={field.value ?? ""} disabled={isPending} />
                 </FormControl>
@@ -207,7 +246,7 @@ export function ReleaseEvaluator({ appId, releaseId }: ReleaseEvaluatorProps) {
             name="vehicleId"
             render={({ field }) => (
                 <FormItem>
-                <FormLabel>Vehicle ID</FormLabel>
+                <FormLabel>Vehicle ID *</FormLabel>
                 <FormControl>
                     <Input placeholder="e.g., vehicle-xyz" {...field} value={field.value ?? ""} disabled={isPending} />
                 </FormControl>
