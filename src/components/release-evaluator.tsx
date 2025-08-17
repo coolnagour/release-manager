@@ -17,10 +17,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { evaluateContext, evaluateRelease, EvaluationContext } from "@/actions/release-actions";
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect, useCallback } from "react";
 import { Release } from "@/types/release";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
-import { CheckCircle, XCircle, Terminal, Info } from "lucide-react";
+import { CheckCircle, XCircle, Terminal, Info, Save, Trash2 } from "lucide-react";
 import { countries } from "@/lib/countries";
 import { Card } from "./ui/card";
 import Link from "next/link";
@@ -49,16 +49,111 @@ export function ReleaseEvaluator({ appId, releaseId }: ReleaseEvaluatorProps) {
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
   const [result, setResult] = useState<{ type: 'success' | 'error' | 'info'; message: string, data?: Release | null | boolean | {release: Release, isAvailable: boolean, availableRelease: Release | null} } | null>(null);
+  const [hasLoadedValues, setHasLoadedValues] = useState(false);
+
+  // Storage key for this app's evaluator form
+  const storageKey = `release-evaluator-${appId}`;
+
+  // Load saved values from localStorage
+  const loadSavedValues = (): FormValues => {
+    if (typeof window === 'undefined') {
+      return { country: "", companyId: "", driverId: "", vehicleId: "" };
+    }
+    
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return {
+          country: parsed.country || "",
+          companyId: parsed.companyId || "",
+          driverId: parsed.driverId || "",
+          vehicleId: parsed.vehicleId || "",
+        };
+      }
+    } catch (error) {
+      console.warn('Failed to load saved form values:', error);
+    }
+    
+    return { country: "", companyId: "", driverId: "", vehicleId: "" };
+  };
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      country: "",
-      companyId: "",
-      driverId: "",
-      vehicleId: "",
-    },
+    defaultValues: loadSavedValues(),
   });
+
+  // Check if values were loaded from storage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          const hasValues = parsed.country || parsed.companyId || parsed.driverId || parsed.vehicleId;
+          if (hasValues) {
+            setHasLoadedValues(true);
+          }
+        } catch (error) {
+          // Ignore parsing errors
+        }
+      }
+    }
+  }, [storageKey]);
+
+  // Save form values to localStorage whenever they change
+  const saveFormValues = useCallback((values: FormValues) => {
+    if (typeof window === 'undefined') return;
+    
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(values));
+    } catch (error) {
+      console.warn('Failed to save form values:', error);
+    }
+  }, [storageKey]);
+
+  // Watch form values and save them with debouncing
+  const watchedValues = form.watch();
+  useEffect(() => {
+    // Debounce the save operation to prevent excessive localStorage writes
+    const timeoutId = setTimeout(() => {
+      saveFormValues(watchedValues);
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [watchedValues.country, watchedValues.companyId, watchedValues.driverId, watchedValues.vehicleId, saveFormValues]);
+
+  // Clear all saved values
+  const clearSavedValues = () => {
+    if (typeof window === 'undefined') return;
+    
+    try {
+      localStorage.removeItem(storageKey);
+      form.reset({ country: "", companyId: "", driverId: "", vehicleId: "" });
+      setHasLoadedValues(false);
+      setResult(null);
+      toast({
+        title: "Form Cleared",
+        description: "All saved form values have been cleared.",
+      });
+    } catch (error) {
+      console.warn('Failed to clear saved values:', error);
+    }
+  };
+
+  // Show notification when values are loaded (only once)
+  useEffect(() => {
+    if (hasLoadedValues) {
+      const timeoutId = setTimeout(() => {
+        toast({
+          title: "Previous Values Restored",
+          description: "Your previous form values have been automatically restored.",
+        });
+      }, 100);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [hasLoadedValues]);
 
   function onSubmit(values: FormValues) {
     const companyId = parseInt(values.companyId, 10);
@@ -193,6 +288,24 @@ export function ReleaseEvaluator({ appId, releaseId }: ReleaseEvaluatorProps) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        {/* Storage Status and Actions */}
+        <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Save className="h-4 w-4" />
+            <span>Form values are automatically saved locally</span>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={clearSavedValues}
+            className="text-xs"
+          >
+            <Trash2 className="h-3 w-3 mr-1" />
+            Clear All
+          </Button>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField
               control={form.control}

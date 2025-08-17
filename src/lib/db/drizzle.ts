@@ -323,10 +323,10 @@ export class DrizzleDataService implements DataService {
         LEFT JOIN release_conditions rc ON r.id = rc.release_id
         LEFT JOIN conditions c ON rc.condition_id = c.id
         WHERE r.application_id = ? AND r.status = ?
-          AND (c.countries IS NULL OR c.countries = '[]' OR json_array_length(c.countries) = 0 OR json_extract(c.countries, '$') LIKE '%"' || ? || '"%')
-          AND (c.companies IS NULL OR c.companies = '[]' OR json_array_length(c.companies) = 0 OR json_extract(c.companies, '$') LIKE '%' || ? || '%')
-          AND  (c.drivers IS NULL OR c.drivers = '[]' OR json_array_length(c.drivers) = 0 OR json_extract(c.drivers, '$') LIKE '%"' || ? || '"%')
-          AND (c.vehicles IS NULL OR c.vehicles = '[]' OR json_array_length(c.vehicles) = 0 OR json_extract(c.vehicles, '$') LIKE '%"' || ? || '"%')
+          AND (c.countries IS NULL OR c.countries = '[]' OR json_array_length(c.countries) = 0 OR EXISTS (SELECT 1 FROM json_each(c.countries) WHERE value = ?))
+          AND (c.companies IS NULL OR c.companies = '[]' OR json_array_length(c.companies) = 0 OR EXISTS (SELECT 1 FROM json_each(c.companies) WHERE value = ?))
+          AND (c.drivers IS NULL OR c.drivers = '[]' OR json_array_length(c.drivers) = 0 OR EXISTS (SELECT 1 FROM json_each(c.drivers) WHERE value = ?))
+          AND (c.vehicles IS NULL OR c.vehicles = '[]' OR json_array_length(c.vehicles) = 0 OR EXISTS (SELECT 1 FROM json_each(c.vehicles) WHERE value = ?))
         ORDER BY r.version_code DESC
         LIMIT 1
       `;
@@ -346,35 +346,18 @@ export class DrizzleDataService implements DataService {
         filledQuery = filledQuery.replace('?', String(value));
       });
 
-      console.log('🔍 getAvailableReleasesForContext Query:', {
-        database: process.env.TURSO_DATABASE_URL,
-        query: filledQuery
-      });
-
       // Execute with replicationSync to ensure fresh data from primary
       const results = await this.client.execute({
         sql: query,
         args: params,
       });
-      
-      console.log('📊 getAvailableReleasesForContext Results:', {
-        rowCount: results.rows.length,
-        rawRows: results.rows,
-        columns: results.columns,
-        executedQuery: filledQuery
-      });
-      
+
       // Convert results to Release objects
       const releases: Release[] = [];
       for (const row of results.rows) {
         // Results come as objects with named properties
         const rowObj = row as any;
         const releaseId = rowObj.id;
-        
-        // Get condition IDs for this release
-        const conditionResult = await this.db.select({ conditionId: schema.releaseConditions.conditionId })
-          .from(schema.releaseConditions)
-          .where(eq(schema.releaseConditions.releaseId, releaseId));
         
         releases.push({
           id: releaseId,
@@ -383,7 +366,7 @@ export class DrizzleDataService implements DataService {
           versionCode: rowObj.version_code,
           status: rowObj.status as ReleaseStatus,
           createdAt: new Date(rowObj.created_at * 1000), // Convert Unix timestamp to Date
-          conditionIds: conditionResult.map(cr => cr.conditionId),
+          conditionIds: [],
         });
       }
       
