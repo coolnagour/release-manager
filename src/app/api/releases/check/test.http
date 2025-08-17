@@ -1,0 +1,71 @@
+### Test Release Check API - POST Method
+POST http://localhost:9002/api/releases/check
+Content-Type: application/json
+
+{
+  "appId": "9d03314d-ab63-4493-8faa-a648ad65ebc9",
+  "country": "IE",
+  "company": 1100,
+  "driver": "9999",
+  "vehicle": "9999",
+  "versionName": "1.0.0",
+  "versionCode": 100
+}
+
+### Test Release Check API - GET Method
+GET http://localhost:9002/api/releases/check?appId=9d03314d-ab63-4493-8faa-a648ad65ebc9&country=IE&company=1100&driver=9999&vehicle=9999&versionName=1.0.0&versionCode=100
+
+### Test with Same Version Code (Should not require update)
+POST http://localhost:9002/api/releases/check
+Content-Type: application/json
+
+{
+  "appId": "9d03314d-ab63-4493-8faa-a648ad65ebc9",
+  "country": "IE",
+  "company": 1100,
+  "driver": "9999",
+  "vehicle": "9999",
+  "versionName": "6.0.10",
+  "versionCode": 14128
+}
+
+### Test with Higher Version Code (Should not require update)
+POST http://localhost:9002/api/releases/check
+Content-Type: application/json
+
+{
+  "appId": "9d03314d-ab63-4493-8faa-a648ad65ebc9",
+  "country": "IE",
+  "company": 1100,
+  "driver": "9999",
+  "vehicle": "9999",
+  "versionName": "2.0.0",
+  "versionCode": 9999
+}
+
+### Test with Invalid UUID (Should return validation error)
+POST http://localhost:9002/api/releases/check
+Content-Type: application/json
+
+{
+  "appId": "invalid-uuid",
+  "country": "IE",
+  "company": 1100,
+  "driver": "9999",
+  "vehicle": "9999",
+  "versionName": "1.0.0",
+  "versionCode": 100
+}
+
+### Test with Missing Required Field (Should return validation error)
+POST http://localhost:9002/api/releases/check
+Content-Type: application/json
+
+{
+  "appId": "9d03314d-ab63-4493-8faa-a648ad65ebc9",
+  "country": "IE",
+  "company": 1100,
+  "driver": "9999",
+  "versionName": "1.0.0",
+  "versionCode": 100
+}
