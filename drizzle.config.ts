@@ -10,7 +10,7 @@ if (!process.env.TURSO_AUTH_TOKEN) {
 }
 
 export default {
-  schema: "./src/lib/db/schema.ts",
+  schema: "./src/lib/db/schema/index.ts",
   out: "./src/lib/db/migrations",
   dialect: "sqlite",
   driver: "turso",

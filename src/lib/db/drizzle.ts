@@ -9,7 +9,7 @@ import { Role } from "@/types/roles";
 import { Release, ReleaseStatus } from "@/types/release";
 import { Condition } from "@/types/condition";
 import { randomUUID } from "crypto";
-import { and, count, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, count, desc, eq, inArray } from 'drizzle-orm';
 
 export class DrizzleDataService implements DataService {
   private client: Client;
