@@ -59,12 +59,7 @@ export const releaseConditions = sqliteTable('release_conditions', {
 // Relations
 
 export const usersRelations = relations(users, ({ many }) => ({
-	applications: relations(applicationUsers, ({ one }) => ({
-        application: one(applications, {
-            fields: [applicationUsers.applicationId],
-            references: [applications.id],
-        }),
-    })),
+	applications: many(applicationUsers),
 }));
 
 export const applicationsRelations = relations(applications, ({ one, many }) => ({
