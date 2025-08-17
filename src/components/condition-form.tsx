@@ -21,7 +21,7 @@ import { useTransition } from "react";
 import { Condition, conditionSchema } from "@/types/condition";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { useRouter } from "next/navigation";
-import { MultiSelect } from "./ui/multi-select";
+import MultipleSelector, { Option } from "./ui/multiple-selector";
 import { countries } from "@/lib/countries";
 import { TagInput } from "./ui/tag-input";
 
@@ -141,10 +141,10 @@ export function ConditionForm({ appId, onConditionSubmitted, condition }: Condit
                         <FormItem>
                             <FormLabel>Countries</FormLabel>
                             <FormControl>
-                               <MultiSelect
+                               <MultipleSelector
                                     options={countryOptions}
-                                    selected={field.value}
-                                    onChange={field.onChange}
+                                    value={countryOptions.filter(opt => field.value?.includes(opt.value))}
+                                    onChange={(selected: Option[]) => field.onChange(selected.map(s => s.value))}
                                     placeholder="Select countries..."
                                     disabled={isPending}
                                />

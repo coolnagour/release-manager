@@ -24,7 +24,7 @@ import { Release, ReleaseStatus } from "@/types/release";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { useRouter } from "next/navigation";
 import { Condition } from "@/types/condition";
-import { MultiSelect } from "./ui/multi-select";
+import MultipleSelector, { Option } from "./ui/multiple-selector";
 
 const formSchema = z.object({
   versionName: z.string().min(1, {
@@ -210,10 +210,10 @@ export function EditReleaseForm({ appId, release, conditions, onReleaseUpdated }
                     <FormItem className="mt-8">
                         <FormLabel>Conditions</FormLabel>
                         <FormControl>
-                            <MultiSelect
+                            <MultipleSelector
                                 options={conditionOptions}
-                                selected={field.value}
-                                onChange={field.onChange}
+                                value={conditionOptions.filter(opt => field.value?.includes(opt.value))}
+                                onChange={(selected: Option[]) => field.onChange(selected.map(s => s.value))}
                                 placeholder="Select conditions..."
                                 disabled={isPending}
                             />
