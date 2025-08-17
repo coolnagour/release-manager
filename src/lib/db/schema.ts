@@ -17,7 +17,7 @@ export const applications = sqliteTable('applications', {
     id: text('id').primaryKey(),
     name: text('name').notNull(),
     packageName: text('package_name').notNull(),
-    ownerId: text('user_id').notNull().references(() => users.uid, { onDelete: 'cascade' }),
+    ownerId: text('owner_id').notNull().references(() => users.uid, { onDelete: 'cascade' }),
     createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(strftime('%s', 'now'))`),
 });
 
