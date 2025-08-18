@@ -64,7 +64,7 @@ function ReleasesPage() {
   const [isPending, startTransition] = useTransition();
   const [currentPage, setCurrentPage] = useState(1);
   const [app, setApp] = useState<Application | null>(null);
-  const [untrackedVCs, setUntrackedVCs] = useState<(string|number)[]>([]);
+  const [untrackedReleases, setUntrackedReleases] = useState<{ versionCode: number; versionName?: string }[]>([]);
   const [googlePlayError, setGooglePlayError] = useState<string | null>(null);
   
   const appId = Array.isArray(params.appId) ? params.appId[0] : params.appId;
@@ -92,10 +92,10 @@ function ReleasesPage() {
           if (playResult.error) {
               setGooglePlayError(playResult.error);
           } else if (playResult.data) {
-              const playStoreVCs = playResult.data;
+              const playStoreReleases = playResult.data;
               const existingVCs = new Set(releasesData.releases.map(r => r.versionCode));
-              const untracked = playStoreVCs.filter(vc => !existingVCs.has(Number(vc)));
-              setUntrackedVCs(untracked);
+              const untracked = playStoreReleases.filter(release => !existingVCs.has(release.versionCode));
+              setUntrackedReleases(untracked);
           }
           
         }).catch(err => {
@@ -176,17 +176,22 @@ function ReleasesPage() {
                 {googlePlayError}
             </AlertDescription>
         </Alert>
-      ) : untrackedVCs.length > 0 ? (
+      ) : untrackedReleases.length > 0 ? (
         <Alert className="mb-4">
             <Terminal className="h-4 w-4" />
             <AlertTitle>Untracked Releases from Google Play</AlertTitle>
             <AlertDescription>
-                The following version codes from the internal track are not in the release manager. Click to add them.
+                The following releases from the internal track are not in the release manager. Click to add them.
                  <div className="flex flex-wrap gap-2 mt-2">
-                    {untrackedVCs.map(vc => (
-                        <Button key={vc} variant="outline" size="sm" asChild>
-                           <Link href={`/app/${appId}/releases/new?versionCode=${vc}`}>
-                             {String(vc)}
+                    {untrackedReleases.map(release => (
+                        <Button key={release.versionCode} variant="outline" size="sm" asChild>
+                           <Link href={`/app/${appId}/releases/new?versionCode=${release.versionCode}${release.versionName ? `&versionName=${encodeURIComponent(release.versionName)}` : ''}`}>
+                             <div className="flex flex-col items-start">
+                               <span className="font-medium">{release.versionCode}</span>
+                               {release.versionName && (
+                                 <span className="text-xs text-muted-foreground">{release.versionName}</span>
+                               )}
+                             </div>
                            </Link>
                         </Button>
                     ))}

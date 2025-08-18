@@ -28,6 +28,7 @@ function NewReleasePage() {
   const appId = Array.isArray(params.appId) ? params.appId[0] : params.appId;
   const versionCodeParam = searchParams.get('versionCode');
   const versionCode = versionCodeParam ? parseInt(versionCodeParam, 10) : undefined;
+  const versionName = searchParams.get('versionName') || undefined;
 
   useEffect(() => {
     if (!authLoading) {
@@ -87,6 +88,7 @@ function NewReleasePage() {
                 appId={appId} 
                 conditions={conditions} 
                 initialVersionCode={versionCode}
+                initialVersionName={versionName}
               />
             </CardContent>
         </Card>

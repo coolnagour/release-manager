@@ -42,9 +42,10 @@ interface CreateReleaseFormProps {
     conditions: Condition[];
     onReleaseCreated?: (newRelease: Release) => void;
     initialVersionCode?: number;
+    initialVersionName?: string;
 }
 
-export function CreateReleaseForm({ appId, conditions, onReleaseCreated, initialVersionCode }: CreateReleaseFormProps) {
+export function CreateReleaseForm({ appId, conditions, onReleaseCreated, initialVersionCode, initialVersionName }: CreateReleaseFormProps) {
   const { toast } = useToast();
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -52,7 +53,7 @@ export function CreateReleaseForm({ appId, conditions, onReleaseCreated, initial
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      versionName: "",
+      versionName: initialVersionName || "",
       versionCode: initialVersionCode || 1,
       status: ReleaseStatus.ACTIVE,
       conditionIds: [],
@@ -129,7 +130,10 @@ export function CreateReleaseForm({ appId, conditions, onReleaseCreated, initial
     if (initialVersionCode) {
       form.setValue("versionCode", initialVersionCode);
     }
-  }, [initialVersionCode, form]);
+    if (initialVersionName) {
+      form.setValue("versionName", initialVersionName);
+    }
+  }, [initialVersionCode, initialVersionName, form]);
 
   const conditionOptions = conditions.map(c => ({ value: c.id, label: c.name }));
 

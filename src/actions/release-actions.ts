@@ -93,19 +93,21 @@ export async function deleteRelease(appId: string, releaseId: string): Promise<{
     }
 }
 
-export async function getInternalTrackVersionCodes(packageName: string): Promise<{ data?: (number | string)[], error?: string }> {
+export async function getInternalTrackVersionCodes(packageName: string): Promise<{ data?: { versionCode: number; versionName?: string }[], error?: string }> {
     const result = await getInternalTrack(packageName);
     if (result.error) {
         return { error: result.error };
     }
     
-    const versionCodes = result.data?.releases
-        ?.flatMap(r => r.versionCodes || [])
-        .filter((vc): vc is string => !!vc) // Ensure version codes are strings
-        .map(vc => parseInt(vc, 10))
-        .filter((vc): vc is number => !isNaN(vc));
+    const releases = result.data?.releases?.map(release => {
+        const versionCodes = release.versionCodes || [];
+        return versionCodes.map(vc => ({
+            versionCode: parseInt(vc, 10),
+            versionName: release.name || undefined
+        }));
+    }).flat().filter(release => !isNaN(release.versionCode)) || [];
 
-    return { data: versionCodes || [] };
+    return { data: releases };
 }
 
 
