@@ -177,27 +177,31 @@ export class TursoDataService implements DataService {
     const isFirstUser = userCountResult.count === 0;
 
     if (!isFirstUser) {
-      // If not the first user, check if their email exists in any application's user list
-      const appUsers = await this.db.selectDistinct({ userId: schema.applicationUsers.userId })
-        .from(schema.applicationUsers);
-
-      const appUserIds = appUsers.map(u => u.userId);
-      
-      if (appUserIds.length > 0) {
-        const userWithEmail = await this.db.query.users.findFirst({
-            where: and(
-                eq(schema.users.email, userData.email),
-                inArray(schema.users.uid, appUserIds)
-            )
+        // Find if a user with this email has been pre-invited to any application.
+        // We look for a user record that has the same email.
+        const invitedUser = await this.db.query.users.findFirst({
+            where: eq(schema.users.email, userData.email),
+            with: {
+                applications: true
+            }
         });
-        if (!userWithEmail) {
+
+        // If a user with that email exists and is part of at least one app, they are allowed.
+        // Or if there's no user record, but their email is in the `application_users` table via an admin adding them.
+        // This is tricky because an admin adds by email, which might create a placeholder user or just the link.
+        // Let's stick to a simpler logic: A user must be *explicitly* listed somewhere.
+        // The most robust check is to see if any application_user entry exists for a user with that email.
+
+        const userInAnyApp = await this.db.select({ userId: schema.applicationUsers.userId })
+            .from(schema.applicationUsers)
+            .leftJoin(schema.users, eq(schema.applicationUsers.userId, schema.users.uid))
+            .where(eq(schema.users.email, userData.email))
+            .limit(1);
+
+        if (userInAnyApp.length === 0) {
             console.log(`Login blocked for ${userData.email}: Not associated with any application.`);
-            return null; // Block user creation
+            return null; // Block user creation/login
         }
-      } else {
-        // No users associated with any app, something is wrong, but we can't let new users in.
-        return null;
-      }
     }
     
     const role = isFirstUser ? Role.SUPERADMIN : Role.USER;
@@ -212,12 +216,20 @@ export class TursoDataService implements DataService {
         createdAt
     };
 
-    await this.db.insert(schema.users).values(newUser);
+    await this.db.insert(schema.users).values(newUser).onConflictDoNothing();
+
+    // After attempting to insert, fetch the user to ensure we return the complete profile
+    const finalUser = await this.db.query.users.findFirst({ where: eq(schema.users.uid, userData.uid) });
+    
+    if (!finalUser) {
+        // This can happen in a race condition or if the user was just deleted.
+        return null;
+    }
 
     return {
-        ...newUser,
-        displayName: newUser.displayName,
-        photoURL: newUser.photoUrl,
+        ...finalUser,
+        displayName: finalUser.displayName,
+        photoURL: finalUser.photoUrl,
     };
   }
   

@@ -189,13 +189,13 @@ export class SupabaseDataService implements DataService {
     const isFirstUser = userCountResult.count === 0;
 
     if (!isFirstUser) {
-      // If not the first user, check if their email exists in any application's user list
-      const appUsers = await this.db.select({ userId: schema.applicationUsers.userId })
+      const userInAnyApp = await this.db.select({ userId: schema.applicationUsers.userId })
         .from(schema.applicationUsers)
         .leftJoin(schema.users, eq(schema.applicationUsers.userId, schema.users.uid))
-        .where(eq(schema.users.email, userData.email));
-
-      if (appUsers.length === 0) {
+        .where(eq(schema.users.email, userData.email))
+        .limit(1);
+      
+      if (userInAnyApp.length === 0) {
         console.log(`Login blocked for ${userData.email}: Not associated with any application.`);
         return null; // Block user creation
       }
@@ -213,13 +213,19 @@ export class SupabaseDataService implements DataService {
         createdAt
     };
 
-    await this.db.insert(schema.users).values(newUser);
+    await this.db.insert(schema.users).values(newUser).onConflictDoNothing();
+    
+    const finalUser = await this.db.query.users.findFirst({ where: eq(schema.users.uid, userData.uid) });
+    
+    if (!finalUser) {
+        return null;
+    }
 
     return {
-        ...newUser,
-        displayName: newUser.displayName,
-        photoURL: newUser.photoUrl,
-        role: newUser.role as Role,
+        ...finalUser,
+        displayName: finalUser.displayName,
+        photoURL: finalUser.photoUrl,
+        role: finalUser.role as Role,
     };
   }
   
