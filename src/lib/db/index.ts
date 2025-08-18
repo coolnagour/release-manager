@@ -3,7 +3,8 @@ import { Application } from "@/types/application";
 import { Release } from "@/types/release";
 import { UserProfile } from "@/types/user-profile";
 import { Condition } from "@/types/condition";
-import { DrizzleDataService } from "./drizzle";
+import { TursoDataService } from "./turso";
+import { SupabaseDataService } from "./supabase";
 
 export interface DataService {
   createApp(appData: Omit<Application, "id" | "createdAt">): Promise<Application>;
@@ -29,8 +30,31 @@ export interface DataService {
   deleteCondition(appId: string, conditionId: string): Promise<void>;
 }
 
+type DatabaseProvider = 'turso' | 'supabase';
+
+function getDbProvider(): DatabaseProvider {
+  const provider = process.env.DATABASE_PROVIDER || 'turso';
+  
+  if (provider !== 'turso' && provider !== 'supabase') {
+    console.warn(`Invalid DATABASE_PROVIDER: ${provider}. Defaulting to 'turso'.`);
+    return 'turso';
+  }
+  
+  return provider as DatabaseProvider;
+}
+
 function initializeDb(): DataService {
-    return new DrizzleDataService();
+  const provider = getDbProvider();
+  
+  console.log(`🗄️  Initializing database with provider: ${provider}`);
+  
+  switch (provider) {
+    case 'supabase':
+      return new SupabaseDataService();
+    case 'turso':
+    default:
+      return new TursoDataService();
+  }
 }
 
 export const db: DataService = initializeDb();

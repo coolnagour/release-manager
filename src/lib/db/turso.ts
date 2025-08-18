@@ -11,7 +11,7 @@ import { Condition } from "@/types/condition";
 import { randomUUID } from "crypto";
 import { and, count, desc, eq, inArray, or, like, sql } from 'drizzle-orm';
 
-export class DrizzleDataService implements DataService {
+export class TursoDataService implements DataService {
   private client: Client;
   private db: LibSQLDatabase<typeof schema>;
 
