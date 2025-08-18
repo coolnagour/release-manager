@@ -12,7 +12,7 @@ export interface DataService {
   getAppsForUser(userId: string): Promise<Application[]>;
   updateApp(id: string, updates: Partial<Omit<Application, "id" | "ownerId" | "createdAt">>): Promise<Application>;
   deleteApp(id: string): Promise<void>;
-  findOrCreateUser(user: Pick<UserProfile, "uid" | "email" | "displayName" | "photoURL">): Promise<UserProfile>;
+  findOrCreateUser(user: Pick<UserProfile, "uid" | "email" | "displayName" | "photoURL">): Promise<UserProfile | null>;
   getSuperAdminsForApp(userIds: string[]): Promise<UserProfile[]>;
 
   createRelease(appId: string, releaseData: Omit<Release, "id" | "createdAt" | "applicationId">): Promise<Release>;

@@ -156,7 +156,7 @@ export class TursoDataService implements DataService {
     await this.db.delete(schema.applications).where(eq(schema.applications.id, id));
   }
 
-  async findOrCreateUser(userData: Pick<UserProfile, "uid" | "email" | "displayName" | "photoURL">): Promise<UserProfile> {
+  async findOrCreateUser(userData: Pick<UserProfile, "uid" | "email" | "displayName" | "photoURL">): Promise<UserProfile | null> {
     if (!userData.email) {
       throw new Error("User email cannot be null.");
     }
@@ -173,8 +173,33 @@ export class TursoDataService implements DataService {
         };
     }
 
-    const [userCount] = await this.db.select({ count: count() }).from(schema.users);
-    const isFirstUser = userCount.count === 0;
+    const [userCountResult] = await this.db.select({ count: count() }).from(schema.users);
+    const isFirstUser = userCountResult.count === 0;
+
+    if (!isFirstUser) {
+      // If not the first user, check if their email exists in any application's user list
+      const appUsers = await this.db.selectDistinct({ userId: schema.applicationUsers.userId })
+        .from(schema.applicationUsers);
+
+      const appUserIds = appUsers.map(u => u.userId);
+      
+      if (appUserIds.length > 0) {
+        const userWithEmail = await this.db.query.users.findFirst({
+            where: and(
+                eq(schema.users.email, userData.email),
+                inArray(schema.users.uid, appUserIds)
+            )
+        });
+        if (!userWithEmail) {
+            console.log(`Login blocked for ${userData.email}: Not associated with any application.`);
+            return null; // Block user creation
+        }
+      } else {
+        // No users associated with any app, something is wrong, but we can't let new users in.
+        return null;
+      }
+    }
+    
     const role = isFirstUser ? Role.SUPERADMIN : Role.USER;
     const createdAt = new Date();
 

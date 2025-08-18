@@ -138,6 +138,6 @@ export async function getApp(appId: string): Promise<Application | null> {
 
 export async function findOrCreateUser(
   user: Pick<UserProfile, "uid" | "email" | "displayName" | "photoURL">
-): Promise<UserProfile> {
+): Promise<UserProfile | null> {
   return await db.findOrCreateUser(user);
 }

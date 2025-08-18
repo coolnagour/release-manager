@@ -1,3 +1,4 @@
+
 import { drizzle, PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import * as schema from './schema-pg';
@@ -166,7 +167,7 @@ export class SupabaseDataService implements DataService {
     await this.db.delete(schema.applications).where(eq(schema.applications.id, id));
   }
 
-  async findOrCreateUser(userData: Pick<UserProfile, "uid" | "email" | "displayName" | "photoURL">): Promise<UserProfile> {
+  async findOrCreateUser(userData: Pick<UserProfile, "uid" | "email" | "displayName" | "photoURL">): Promise<UserProfile | null> {
     if (!userData.email) {
       throw new Error("User email cannot be null.");
     }
@@ -184,8 +185,22 @@ export class SupabaseDataService implements DataService {
         };
     }
 
-    const [userCount] = await this.db.select({ count: count() }).from(schema.users);
-    const isFirstUser = userCount.count === 0;
+    const [userCountResult] = await this.db.select({ count: count() }).from(schema.users);
+    const isFirstUser = userCountResult.count === 0;
+
+    if (!isFirstUser) {
+      // If not the first user, check if their email exists in any application's user list
+      const appUsers = await this.db.select({ userId: schema.applicationUsers.userId })
+        .from(schema.applicationUsers)
+        .leftJoin(schema.users, eq(schema.applicationUsers.userId, schema.users.uid))
+        .where(eq(schema.users.email, userData.email));
+
+      if (appUsers.length === 0) {
+        console.log(`Login blocked for ${userData.email}: Not associated with any application.`);
+        return null; // Block user creation
+      }
+    }
+
     const role = isFirstUser ? Role.SUPERADMIN : Role.USER;
     const createdAt = new Date();
 

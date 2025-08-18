@@ -97,11 +97,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           displayName: user.displayName,
           photoURL: user.photoURL,
         });
-        setUserProfile(profile);
+
+        if (profile) {
+          setUserProfile(profile);
+          setUser(user);
+        } else {
+          // User is not allowed, sign them out.
+          await signOut(auth);
+          setUser(null);
+          setUserProfile(null);
+        }
+
       } else {
         setUserProfile(null);
+        setUser(null);
       }
-      setUser(user);
       setLoading(false);
     });
 
