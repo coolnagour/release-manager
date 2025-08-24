@@ -58,7 +58,7 @@ function ConditionsPage() {
   const appId = Array.isArray(params.appId) ? params.appId[0] : params.appId;
   const userRoleForApp = userProfile?.roles?.[appId];
 
-  const canManageConditions = userRoleForApp === Role.SUPERADMIN || userRoleForApp === Role.ADMIN;
+  const canManageConditions = userProfile?.isSuperAdmin || userRoleForApp === Role.ADMIN;
 
   const fetchConditions = () => {
     if (appId) {

@@ -69,7 +69,8 @@ const createMockUserProfile = (email: string): UserProfile => ({
     email: email,
     displayName: `Mock User (${email.split('@')[0]})`,
     photoURL: "https://placehold.co/100x100.png",
-    roles: { "mock-app-id": Role.SUPERADMIN }, // Mock role for a mock app
+    isSuperAdmin: true,
+    roles: { "mock-app-id": Role.ADMIN }, // Mock role for a mock app
     createdAt: new Date(),
 });
 

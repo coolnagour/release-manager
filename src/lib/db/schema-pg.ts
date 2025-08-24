@@ -6,6 +6,7 @@ import {
   integer,
   jsonb,
   primaryKey,
+  boolean,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { Role } from '@/types/roles';
@@ -16,6 +17,7 @@ export const users = pgTable('users', {
   email: text('email'),
   displayName: text('display_name'),
   photoUrl: text('photo_url'),
+  isSuperAdmin: boolean('is_super_admin').notNull().default(false),
   createdAt: timestamp('created_at').notNull(),
 });
 

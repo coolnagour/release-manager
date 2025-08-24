@@ -61,9 +61,10 @@ export class TursoDataService implements DataService {
                 await tx.insert(schema.users).values({
                     uid: newUserId,
                     email: user.email,
+                    isSuperAdmin: false,
                     createdAt: new Date(),
                 });
-                dbUser = { uid: newUserId, email: user.email, displayName: null, photoUrl: null, createdAt: new Date() };
+                dbUser = { uid: newUserId, email: user.email, displayName: null, photoUrl: null, isSuperAdmin: false, createdAt: new Date() };
             }
             await tx.insert(schema.applicationUsers).values({
                 applicationId: id,
@@ -135,7 +136,7 @@ export class TursoDataService implements DataService {
                 if (!dbUser) {
                     const newUserId = randomUUID();
                     await tx.insert(schema.users).values({ uid: newUserId, email: user.email, createdAt: new Date() });
-                    dbUser = { uid: newUserId, email: user.email, displayName: null, photoUrl: null, createdAt: new Date() };
+                    dbUser = { uid: newUserId, email: user.email, displayName: null, photoUrl: null, isSuperAdmin: false, createdAt: new Date() };
                 }
                 await tx.insert(schema.applicationUsers).values({
                     applicationId: id,
@@ -155,7 +156,7 @@ export class TursoDataService implements DataService {
     await this.db.delete(schema.applications).where(eq(schema.applications.id, id));
   }
   
-  async getUser(uid: string): Promise<(Omit<UserProfile, 'roles'> & { role: null }) | null> {
+  async getUser(uid: string): Promise<Omit<UserProfile, 'roles'> | null> {
     const user = await this.db.query.users.findFirst({
         where: eq(schema.users.uid, uid)
     });
@@ -164,7 +165,6 @@ export class TursoDataService implements DataService {
         ...user,
         displayName: user.displayName,
         photoURL: user.photoUrl,
-        role: null, // Global role is deprecated
     };
   }
 
@@ -181,24 +181,12 @@ export class TursoDataService implements DataService {
         const [userCountResult] = await this.db.select({ count: count() }).from(schema.users);
         const isFirstUser = userCountResult.count === 0;
 
-        if (!isFirstUser) {
-             const userInAnyApp = await this.db.select({ userId: schema.applicationUsers.userId })
-                .from(schema.applicationUsers)
-                .leftJoin(schema.users, eq(schema.applicationUsers.userId, schema.users.uid))
-                .where(eq(schema.users.email, userData.email))
-                .limit(1);
-
-             if (userInAnyApp.length === 0) {
-                 console.log(`Login blocked for ${userData.email}: Not associated with any application.`);
-                 return null;
-             }
-        }
-
         const newUser: schema.User = {
             uid: userData.uid,
             email: userData.email,
             displayName: userData.displayName || null,
             photoUrl: userData.photoURL || null,
+            isSuperAdmin: isFirstUser,
             createdAt: new Date(),
         };
 
@@ -208,20 +196,17 @@ export class TursoDataService implements DataService {
         });
         existingUser = newUser;
         
-        if (isFirstUser) {
-            const allApps = await this.db.select({ id: schema.applications.id }).from(schema.applications);
-            if (allApps.length > 0) {
-                await this.db.insert(schema.applicationUsers).values(
-                    allApps.map(app => ({
-                        applicationId: app.id,
-                        userId: userData.uid,
-                        role: Role.SUPERADMIN
-                    }))
-                ).onConflictDoUpdate({
-                    target: [schema.applicationUsers.applicationId, schema.applicationUsers.userId],
-                    set: { role: Role.SUPERADMIN }
-                });
-            }
+    } else {
+        // If user exists, update their profile info
+        await this.db.update(schema.users).set({
+            displayName: userData.displayName,
+            photoUrl: userData.photoURL,
+        }).where(eq(schema.users.uid, userData.uid));
+
+        existingUser = {
+            ...existingUser,
+            displayName: userData.displayName,
+            photoUrl: userData.photoURL,
         }
     }
 
@@ -239,6 +224,7 @@ export class TursoDataService implements DataService {
         email: existingUser.email,
         displayName: existingUser.displayName,
         photoURL: existingUser.photoUrl,
+        isSuperAdmin: existingUser.isSuperAdmin,
         roles: rolesMap,
         createdAt: existingUser.createdAt,
     };

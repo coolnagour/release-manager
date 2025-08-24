@@ -6,6 +6,7 @@ export interface UserProfile {
   email: string | null;
   displayName: string | null;
   photoURL: string | null;
+  isSuperAdmin: boolean;
   roles: { [appId: string]: Role };
   createdAt: Date;
 }

@@ -69,7 +69,7 @@ function ReleasesPage() {
   
   const appId = Array.isArray(params.appId) ? params.appId[0] : params.appId;
 
-  const canCreateRelease = userProfile?.role === Role.SUPERADMIN || userProfile?.role === Role.ADMIN;
+  const canCreateRelease = userProfile?.isSuperAdmin || userProfile?.roles?.[appId] === Role.ADMIN;
   
   const fetchReleasesAndPlayData = () => {
     if (appId) {

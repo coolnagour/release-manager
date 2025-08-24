@@ -66,7 +66,7 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
     defaultValues: {
       appName: application?.name || "",
       packageName: application?.packageName || "",
-      users: application?.users || (user?.email ? [{ email: user.email, role: Role.SUPERADMIN }] : []),
+      users: application?.users || (user?.email ? [{ email: user.email, role: Role.ADMIN }] : []),
     },
   });
 
@@ -127,28 +127,19 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
 
   const handleRemoveUser = (index: number) => {
     const userToRemove = fields[index];
-    if (userToRemove.email === user?.email) {
-      toast({
+    if (userToRemove.email === application?.ownerId && user?.uid === application?.ownerId) {
+       toast({
         title: "Action Not Allowed",
-        description: "You cannot remove yourself from the application.",
+        description: "The application owner cannot be removed.",
         variant: "destructive",
       });
       return;
-    }
-     if (userToRemove.role === Role.SUPERADMIN && userProfile?.roles?.[application!.id] !== Role.SUPERADMIN) {
-        toast({
-            title: "Action Not Allowed",
-            description: "Admins cannot remove Super Admins.",
-            variant: "destructive",
-        });
-        return;
     }
     remove(index);
   }
 
   const currentUserRole = userProfile?.roles?.[application?.id ?? ''];
-  const canEditAppName = currentUserRole === Role.SUPERADMIN;
-  const canEditUsers = currentUserRole === Role.SUPERADMIN || currentUserRole === Role.ADMIN;
+  const canManageApp = userProfile?.isSuperAdmin || currentUserRole === Role.ADMIN;
   
   return (
     <Form {...form}>
@@ -161,7 +152,7 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
                 <FormItem>
                 <FormLabel>App Name</FormLabel>
                 <FormControl>
-                    <Input placeholder="My Awesome App" {...field} disabled={isPending || (isEditMode && !canEditAppName)} />
+                    <Input placeholder="My Awesome App" {...field} disabled={isPending || !canManageApp} />
                 </FormControl>
                 <FormDescription>
                     This is the public display name of your application.
@@ -177,7 +168,7 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
                 <FormItem className="mt-8">
                 <FormLabel>Package Name</FormLabel>
                 <FormControl>
-                    <Input placeholder="com.example.app" {...field} disabled={isPending || (isEditMode && !canEditAppName)} />
+                    <Input placeholder="com.example.app" {...field} disabled={isPending || !canManageApp} />
                 </FormControl>
                 <FormDescription>
                     The unique identifier for your app (e.g., Android package name or iOS bundle ID).
@@ -200,17 +191,15 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
                         <CardContent className="pt-6">
                             <div className="space-y-4">
                                 {fields.map((field, index) => {
-                                    const isSuperAdmin = field.role === Role.SUPERADMIN;
-                                    const canCurrentUserEdit = currentUserRole === Role.SUPERADMIN || !isSuperAdmin;
-
+                                    const isOwner = application?.ownerId === user?.uid && field.email === user.email;
                                     return (
                                         <div key={field.id} className="flex items-center justify-between gap-4">
-                                            <span className="flex-1 truncate">{field.email}{isSuperAdmin && " (Owner)"}</span>
+                                            <span className="flex-1 truncate">{field.email}{isOwner && " (Owner)"}</span>
                                             <div className="flex items-center gap-2">
                                                 <Select
                                                     value={field.role}
                                                     onValueChange={(newRole) => update(index, { ...field, role: newRole as Role })}
-                                                    disabled={isPending || !canCurrentUserEdit || isSuperAdmin}
+                                                    disabled={isPending || !canManageApp || isOwner}
                                                 >
                                                     <SelectTrigger className="w-[120px]">
                                                         <SelectValue />
@@ -218,11 +207,10 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
                                                     <SelectContent>
                                                         <SelectItem value={Role.ADMIN}>Admin</SelectItem>
                                                         <SelectItem value={Role.USER}>User</SelectItem>
-                                                        {isSuperAdmin && <SelectItem value={Role.SUPERADMIN}>Super Admin</SelectItem>}
                                                     </SelectContent>
                                                 </Select>
-                                                {!isSuperAdmin && (
-                                                    <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveUser(index)} disabled={isPending || !canEditUsers}>
+                                                {!isOwner && (
+                                                    <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveUser(index)} disabled={isPending || !canManageApp}>
                                                         <Trash className="h-4 w-4 text-destructive" />
                                                     </Button>
                                                 )}
@@ -241,7 +229,7 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
             )}
             />
 
-            {canEditUsers && (
+            {canManageApp && (
                 <Card className="mt-8">
                     <CardHeader>
                         <CardTitle className="text-lg">Add New User</CardTitle>
@@ -263,7 +251,7 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
         </div>
 
         <div className="flex justify-end gap-2">
-            <Button type="submit" style={{ backgroundColor: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))" }} disabled={isPending || (isEditMode && !canEditAppName && !canEditUsers)}>
+            <Button type="submit" style={{ backgroundColor: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))" }} disabled={isPending || !canManageApp}>
               {isPending ? (isEditMode ? "Saving..." : "Creating...") : (isEditMode ? "Save Changes" : "Create Application")}
             </Button>
         </div>

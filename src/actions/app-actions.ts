@@ -39,15 +39,15 @@ export async function createApp(values: z.infer<typeof formSchema>, ownerId: str
 
   const { appName, packageName, users } = validatedFields.data;
 
-  // Ensure the owner is always in the list as a superadmin
+  // Ensure the owner is always in the list as an admin
   const ownerInList = users.some(u => u.email === ownerEmail);
   if (!ownerInList) {
-    users.push({ email: ownerEmail, role: Role.SUPERADMIN });
+    users.push({ email: ownerEmail, role: Role.ADMIN });
   } else {
-    // Make sure the owner's role is superadmin
+    // Make sure the owner's role is admin
     const ownerEntry = users.find(u => u.email === ownerEmail);
     if (ownerEntry) {
-      ownerEntry.role = Role.SUPERADMIN;
+      ownerEntry.role = Role.ADMIN;
     }
   }
 
@@ -87,35 +87,19 @@ export async function updateApp(appId: string, values: z.infer<typeof formSchema
     }
     
     const currentUserRoleInApp = currentUser.roles?.[appId];
-    if (!currentUserRoleInApp) {
+    if (!currentUser.isSuperAdmin && currentUserRoleInApp !== Role.ADMIN) {
         return { error: "Unauthorized." };
     }
 
     const { appName, packageName, users: newUsers } = validatedFields.data;
     
-    // Ensure the current user cannot remove themselves
-    if (!newUsers.some(u => u.email === currentUser.email)) {
+    if (!currentUser.isSuperAdmin && !newUsers.some(u => u.email === currentUser.email)) {
         return { error: "You cannot remove yourself from an application." };
     }
     
-    // Ensure owner is not removed
     const owner = await db.getUser(app.ownerId);
     if (owner?.email && !newUsers.some(u => u.email === owner.email)) {
-        newUsers.push({ email: owner.email, role: Role.SUPERADMIN });
-    }
-    
-    // Admins cannot remove or demote Super Admins
-    if (currentUserRoleInApp === Role.ADMIN) {
-        const originalSuperAdmins = app.users.filter(u => u.role === Role.SUPERADMIN);
-        for (const sa of originalSuperAdmins) {
-            const newUserEntry = newUsers.find(u => u.email === sa.email);
-            if (!newUserEntry) {
-                return { error: `Admins cannot remove Super Admin "${sa.email}".` };
-            }
-            if (newUserEntry.role !== Role.SUPERADMIN) {
-                 return { error: `Admins cannot change the role of Super Admin "${sa.email}".` };
-            }
-        }
+        newUsers.push({ email: owner.email, role: Role.ADMIN });
     }
 
     try {

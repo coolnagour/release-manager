@@ -2,7 +2,6 @@
 "use client";
 
 import { Header } from "@/components/header";
-import { CreateAppForm } from "@/components/create-app-form";
 import {
   Card,
   CardContent,
@@ -14,7 +13,7 @@ import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
-function CreateAppPage() {
+function ManageUsersPage() {
   const { userProfile, loading } = useAuth();
   const router = useRouter();
 
@@ -38,16 +37,16 @@ function CreateAppPage() {
   return (
       <div className="flex flex-col min-h-screen">
         <Header />
-        <main className="flex-1 px-4 md:px-6 lg:px-8 py-8 flex items-center justify-center">
-          <Card className="w-full max-w-2xl shadow-lg">
+        <main className="flex-1 px-4 md:px-6 lg:px-8 py-8">
+          <Card className="w-full shadow-lg">
             <CardHeader>
-              <CardTitle className="text-2xl font-headline">Create a New Application</CardTitle>
+              <CardTitle className="text-2xl font-headline">Manage Users</CardTitle>
               <CardDescription>
-                Fill out the details below to add a new application to the release manager.
+                Here you can view, add, and manage all users in the system.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <CreateAppForm />
+              <p>User management functionality will be implemented here.</p>
             </CardContent>
           </Card>
         </main>
@@ -55,4 +54,4 @@ function CreateAppPage() {
   );
 }
 
-export default CreateAppPage;
+export default ManageUsersPage;

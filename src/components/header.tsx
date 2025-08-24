@@ -13,10 +13,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { PlusCircle, Rocket, LogOut, Settings, Moon, Sun } from "lucide-react";
+import { PlusCircle, Rocket, LogOut, Settings, Moon, Sun, Users } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Role } from "@/types/roles";
 
 export function Header() {
   const { setTheme } = useTheme();
@@ -26,8 +25,6 @@ export function Header() {
     await logout();
   };
   
-  const isSuperAdmin = userProfile && Object.values(userProfile.roles).includes(Role.SUPERADMIN);
-
   return (
     <header className="bg-card border-b sticky top-0 z-10">
       <div className="w-full px-4 md:px-6 lg:px-8">
@@ -39,13 +36,21 @@ export function Header() {
           <div className="flex items-center gap-4">
             {loading ? (
               <Skeleton className="h-10 w-36 rounded-md" />
-            ) : user && isSuperAdmin ? (
-              <Button asChild style={{ backgroundColor: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))" }}>
-                <Link href="/app/new">
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Create New App
-                </Link>
-              </Button>
+            ) : userProfile?.isSuperAdmin ? (
+              <>
+                <Button asChild variant="outline">
+                  <Link href="/admin/users">
+                    <Users className="mr-2 h-4 w-4" />
+                    Manage Users
+                  </Link>
+                </Button>
+                <Button asChild style={{ backgroundColor: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))" }}>
+                  <Link href="/app/new">
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Create New App
+                  </Link>
+                </Button>
+              </>
             ) : null}
             
             {loading ? (
