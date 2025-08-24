@@ -10,7 +10,7 @@ import { Release, ReleaseStatus } from "@/types/release";
 import { Condition } from "@/types/condition";
 import { randomUUID } from "crypto";
 import { and, count, desc, eq, inArray, sql, Param } from 'drizzle-orm';
-import { DriverActivityLog } from '@/types/driver';
+import { Driver } from '@/types/driver';
 
 export class SupabaseDataService implements DataService {
   private client: postgres.Sql<{}>;
@@ -172,9 +172,12 @@ export class SupabaseDataService implements DataService {
     });
     if (!user) return null;
     return {
-        ...user,
+        uid: user.uid,
+        email: user.email,
         displayName: user.displayName,
         photoURL: user.photoUrl,
+        isSuperAdmin: user.isSuperAdmin,
+        createdAt: user.createdAt,
     };
   }
 
@@ -201,6 +204,7 @@ export class SupabaseDataService implements DataService {
       return {
           ...newUser,
           roles: {}, // No app roles initially
+          photoURL: null,
       };
   }
 
@@ -216,18 +220,6 @@ export class SupabaseDataService implements DataService {
     if (!existingUser) {
         const [userCountResult] = await this.db.select({ count: count() }).from(schema.users);
         const isFirstUser = userCountResult.count === 0;
-
-        // If not first user, check if they are part of any application
-        if (!isFirstUser) {
-             const appUser = await this.db.query.applicationUsers.findFirst({
-                where: eq(schema.applicationUsers.userId, userData.uid)
-            });
-            if (!appUser) {
-                // If user is not associated with any app, do not create them
-                 console.warn(`Login blocked for ${userData.email} - not associated with any application.`);
-                return null;
-            }
-        }
         
         const newUser = {
             uid: userData.uid,
@@ -525,12 +517,27 @@ export class SupabaseDataService implements DataService {
         .where(and(eq(schema.conditions.id, conditionId), eq(schema.conditions.applicationId, appId)));
   }
 
-  async logDriverActivity(logData: Omit<DriverActivityLog, "id" | "createdAt">): Promise<void> {
+  async logDriverActivity(logData: Omit<Driver, "id" | "createdAt">): Promise<void> {
     await this.db.insert(schema.driversTable).values({
       id: randomUUID(),
       createdAt: new Date(),
       ...logData,
     });
+  }
+
+  async getDriverDistribution(appId: string): Promise<{ versionCode: number; versionName: string; count: number; }[]> {
+      const result = await this.db
+        .select({
+            versionCode: schema.driversTable.versionCode,
+            versionName: schema.driversTable.versionName,
+            count: count(schema.driversTable.id),
+        })
+        .from(schema.driversTable)
+        .where(eq(schema.driversTable.applicationId, appId))
+        .groupBy(schema.driversTable.versionCode, schema.driversTable.versionName)
+        .orderBy(desc(schema.driversTable.versionCode));
+
+      return result;
   }
 
   async close(): Promise<void> {

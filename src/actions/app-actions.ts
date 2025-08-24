@@ -136,3 +136,7 @@ export async function findOrCreateUser(
 ): Promise<UserProfile | null> {
   return await db.findOrCreateUser(user);
 }
+
+export async function getDriverDistribution(appId: string): Promise<{versionCode: number, versionName: string, count: number}[]> {
+    return await db.getDriverDistribution(appId);
+}

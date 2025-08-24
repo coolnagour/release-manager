@@ -34,6 +34,7 @@ export interface DataService {
   deleteCondition(appId: string, conditionId: string): Promise<void>;
   
   logDriverActivity(logData: Omit<Driver, "id" | "createdAt">): Promise<void>;
+  getDriverDistribution(appId: string): Promise<{versionCode: number, versionName: string, count: number}[]>;
 }
 
 type DatabaseProvider = 'turso' | 'supabase';

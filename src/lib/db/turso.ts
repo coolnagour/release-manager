@@ -10,7 +10,7 @@ import { Release, ReleaseStatus } from "@/types/release";
 import { Condition } from "@/types/condition";
 import { randomUUID } from "crypto";
 import { and, count, desc, eq, inArray, or, like, sql } from 'drizzle-orm';
-import { DriverActivityLog } from '@/types/driver';
+import { Driver } from '@/types/driver';
 
 export class TursoDataService implements DataService {
   private client: Client;
@@ -210,18 +210,6 @@ export class TursoDataService implements DataService {
         const [userCountResult] = await this.db.select({ count: count() }).from(schema.users);
         const isFirstUser = userCountResult.count === 0;
 
-        // If not first user, check if they are part of any application
-        if (!isFirstUser) {
-            const appUser = await this.db.query.applicationUsers.findFirst({
-                where: eq(schema.applicationUsers.userId, userData.uid)
-            });
-            if (!appUser) {
-                // If user is not associated with any app, do not create them
-                console.warn(`Login blocked for ${userData.email} - not associated with any application.`);
-                return null;
-            }
-        }
-        
         const newUser: schema.User = {
             uid: userData.uid,
             email: userData.email,
@@ -527,11 +515,26 @@ export class TursoDataService implements DataService {
         .where(and(eq(schema.conditions.id, conditionId), eq(schema.conditions.applicationId, appId)));
   }
 
-  async logDriverActivity(logData: Omit<DriverActivityLog, "id" | "createdAt">): Promise<void> {
+  async logDriverActivity(logData: Omit<Driver, "id" | "createdAt">): Promise<void> {
     await this.db.insert(schema.drivers).values({
       id: randomUUID(),
       createdAt: new Date(),
       ...logData,
     });
+  }
+
+  async getDriverDistribution(appId: string): Promise<{ versionCode: number; versionName: string; count: number; }[]> {
+      const result = await this.db
+        .select({
+            versionCode: schema.drivers.versionCode,
+            versionName: schema.drivers.versionName,
+            count: count(schema.drivers.id),
+        })
+        .from(schema.drivers)
+        .where(eq(schema.drivers.applicationId, appId))
+        .groupBy(schema.drivers.versionCode, schema.drivers.versionName)
+        .orderBy(desc(schema.drivers.versionCode));
+
+      return result;
   }
 }
