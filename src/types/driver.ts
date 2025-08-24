@@ -1,4 +1,5 @@
-export interface DriverActivityLog {
+
+export interface Driver {
   id: string;
   createdAt: Date;
   applicationId: string;

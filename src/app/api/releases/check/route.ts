@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/lib/db';
-import { DriverActivityLog } from '@/types/driver';
+import { Driver } from '@/types/driver';
 
 // Request schema validation
 const checkReleaseSchema = z.object({
@@ -51,7 +51,7 @@ async function handleRequest(requestData: any) {
     const { appId, country, companyId, driverId, vehicleId, versionName, versionCode } = validatedData;
     
     // Log the API call
-    await db.logDriverActivity(validatedData as Omit<DriverActivityLog, "id" | "createdAt">);
+    await db.logDriverActivity(validatedData as Omit<Driver, "id" | "createdAt">);
 
     // Get available releases for the driver's context
     const availableReleases = await db.getAvailableReleasesForContext(appId, {
