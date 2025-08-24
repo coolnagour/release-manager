@@ -96,7 +96,7 @@ export class TursoDataService implements DataService {
   }
 
   async getAppsForUser(userId: string): Promise<Application[]> {
-    const userWithApps = await this.db.query.users.findFirst({
+     const userWithApps = await this.db.query.users.findFirst({
         where: eq(schema.users.uid, userId),
         with: {
             applications: {
