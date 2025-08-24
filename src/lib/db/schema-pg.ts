@@ -64,7 +64,7 @@ export const releaseConditions = pgTable('release_conditions', {
   pk: primaryKey({ columns: [table.releaseId, table.conditionId] })
 }));
 
-export const releaseCheckLogs = pgTable('release_check_logs', {
+export const driversTable = pgTable('drivers', {
   id: text('id').primaryKey(),
   applicationId: text('application_id').notNull(),
   createdAt: timestamp('created_at').notNull(),
@@ -90,7 +90,7 @@ export const applicationsRelations = relations(applications, ({ many, one }) => 
   users: many(applicationUsers),
   conditions: many(conditions),
   releases: many(releases),
-  releaseCheckLogs: many(releaseCheckLogs),
+  driverLogs: many(driversTable),
 }));
 
 export const applicationUsersRelations = relations(applicationUsers, ({ one }) => ({
@@ -131,9 +131,9 @@ export const releaseConditionsRelations = relations(releaseConditions, ({ one })
   }),
 }));
 
-export const releaseCheckLogsRelations = relations(releaseCheckLogs, ({ one }) => ({
+export const driversRelations = relations(driversTable, ({ one }) => ({
   application: one(applications, {
-    fields: [releaseCheckLogs.applicationId],
+    fields: [driversTable.applicationId],
     references: [applications.id]
   }),
 }));
@@ -146,12 +146,12 @@ export const pgSchema = {
   conditions,
   releases,
   releaseConditions,
-  releaseCheckLogs,
+  drivers: driversTable,
   usersRelations,
   applicationsRelations,
   applicationUsersRelations,
   conditionsRelations,
   releasesRelations,
   releaseConditionsRelations,
-  releaseCheckLogsRelations,
+  driversRelations,
 };

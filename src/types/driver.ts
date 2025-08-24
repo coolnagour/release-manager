@@ -1,4 +1,4 @@
-export interface ReleaseCheckLog {
+export interface DriverActivityLog {
   id: string;
   createdAt: Date;
   applicationId: string;

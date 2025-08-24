@@ -9,7 +9,7 @@ import { applicationUsers, applicationUsersRelations } from './application-users
 import { conditions, conditionsRelations } from './conditions';
 import { releases, releasesRelations } from './releases';
 import { releaseConditions, releaseConditionsRelations } from './release-conditions';
-import { releaseCheckLogs, releaseCheckLogsRelations } from './release-check-logs';
+import { drivers, driversRelations } from './drivers';
 
 export * from './users';
 export * from './applications';
@@ -17,7 +17,7 @@ export * from './application-users';
 export * from './conditions';
 export * from './releases';
 export * from './release-conditions';
-export * from './release-check-logs';
+export * from './drivers';
 
 export const schema = {
     users,
@@ -26,12 +26,12 @@ export const schema = {
     conditions,
     releases,
     releaseConditions,
-    releaseCheckLogs,
+    drivers,
     usersRelations,
     applicationsRelations,
     applicationUsersRelations,
     conditionsRelations,
     releasesRelations,
     releaseConditionsRelations,
-    releaseCheckLogsRelations,
+    driversRelations,
 };

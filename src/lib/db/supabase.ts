@@ -10,7 +10,7 @@ import { Release, ReleaseStatus } from "@/types/release";
 import { Condition } from "@/types/condition";
 import { randomUUID } from "crypto";
 import { and, count, desc, eq, inArray, sql, Param } from 'drizzle-orm';
-import { ReleaseCheckLog } from '@/types/release-check-log';
+import { DriverActivityLog } from '@/types/driver';
 
 export class SupabaseDataService implements DataService {
   private client: postgres.Sql<{}>;
@@ -525,8 +525,8 @@ export class SupabaseDataService implements DataService {
         .where(and(eq(schema.conditions.id, conditionId), eq(schema.conditions.applicationId, appId)));
   }
 
-  async logReleaseCheck(logData: Omit<ReleaseCheckLog, "id" | "createdAt">): Promise<void> {
-    await this.db.insert(schema.releaseCheckLogs).values({
+  async logDriverActivity(logData: Omit<DriverActivityLog, "id" | "createdAt">): Promise<void> {
+    await this.db.insert(schema.driversTable).values({
       id: randomUUID(),
       createdAt: new Date(),
       ...logData,

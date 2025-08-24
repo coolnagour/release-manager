@@ -2,7 +2,7 @@ import { relations, sql } from "drizzle-orm";
 import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { applications } from "./applications";
 
-export const releaseCheckLogs = sqliteTable('release_check_logs', {
+export const drivers = sqliteTable('drivers', {
     id: text('id').primaryKey(),
     applicationId: text('application_id').notNull().references(() => applications.id, { onDelete: 'cascade' }),
     createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(strftime('%s', 'now'))`),
@@ -20,9 +20,9 @@ export const releaseCheckLogs = sqliteTable('release_check_logs', {
     versionCode: integer('version_code').notNull(),
 });
 
-export const releaseCheckLogsRelations = relations(releaseCheckLogs, ({ one }) => ({
+export const driversRelations = relations(drivers, ({ one }) => ({
     application: one(applications, {
-        fields: [releaseCheckLogs.applicationId],
+        fields: [drivers.applicationId],
         references: [applications.id],
     }),
 }));

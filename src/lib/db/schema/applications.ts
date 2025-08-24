@@ -4,6 +4,7 @@ import { users } from "./users";
 import { applicationUsers } from "./application-users";
 import { releases } from "./releases";
 import { conditions } from "./conditions";
+import { drivers } from "./drivers";
 
 export const applications = sqliteTable('applications', {
     id: text('id').primaryKey(),
@@ -22,6 +23,7 @@ export const applicationsRelations = relations(applications, ({ one, many }) => 
     applicationUsers: many(applicationUsers),
     releases: many(releases),
     conditions: many(conditions),
+    driverLogs: many(drivers),
 }));
 
 export type Application = typeof applications.$inferSelect;
