@@ -10,10 +10,11 @@ import { Release, ReleaseStatus } from "@/types/release";
 import { Condition } from "@/types/condition";
 import { randomUUID } from "crypto";
 import { and, count, desc, eq, inArray, or, like, sql } from 'drizzle-orm';
+import { ReleaseCheckLog } from '@/types/release-check-log';
 
 export class TursoDataService implements DataService {
   private client: Client;
-  private db: LibSQLDatabase<typeof schema>;
+  private db: LibSQLDatabase<typeof schema.schema>;
 
   constructor() {
     if (!process.env.TURSO_DATABASE_URL || !process.env.TURSO_AUTH_TOKEN) {
@@ -23,7 +24,7 @@ export class TursoDataService implements DataService {
       url: process.env.TURSO_DATABASE_URL!,
       authToken: process.env.TURSO_AUTH_TOKEN!,
     });
-    this.db = drizzle(this.client, { schema });
+    this.db = drizzle(this.client, { schema: schema.schema });
   }
 
   private async getAppUsers(appId: string): Promise<ApplicationUser[]> {
@@ -135,7 +136,7 @@ export class TursoDataService implements DataService {
                 let dbUser = await tx.query.users.findFirst({ where: eq(schema.users.email, user.email) });
                 if (!dbUser) {
                     const newUserId = randomUUID();
-                    await tx.insert(schema.users).values({ uid: newUserId, email: user.email, createdAt: new Date() });
+                    await tx.insert(schema.users).values({ uid: newUserId, email: user.email, isSuperAdmin: false, createdAt: new Date() });
                     dbUser = { uid: newUserId, email: user.email, displayName: null, photoUrl: null, isSuperAdmin: false, createdAt: new Date() };
                 }
                 await tx.insert(schema.applicationUsers).values({
@@ -209,6 +210,18 @@ export class TursoDataService implements DataService {
         const [userCountResult] = await this.db.select({ count: count() }).from(schema.users);
         const isFirstUser = userCountResult.count === 0;
 
+        // If not first user, check if they are part of any application
+        if (!isFirstUser) {
+            const appUser = await this.db.query.applicationUsers.findFirst({
+                where: eq(schema.applicationUsers.userId, userData.uid)
+            });
+            if (!appUser) {
+                // If user is not associated with any app, do not create them
+                console.warn(`Login blocked for ${userData.email} - not associated with any application.`);
+                return null;
+            }
+        }
+        
         const newUser: schema.User = {
             uid: userData.uid,
             email: userData.email,
@@ -369,7 +382,6 @@ export class TursoDataService implements DataService {
           AND (c.drivers IS NULL OR c.drivers = '[]' OR json_array_length(c.drivers) = 0 OR EXISTS (SELECT 1 FROM json_each(c.drivers) WHERE value = ?))
           AND (c.vehicles IS NULL OR c.vehicles = '[]' OR json_array_length(c.vehicles) = 0 OR EXISTS (SELECT 1 FROM json_each(c.vehicles) WHERE value = ?))
         ORDER BY r.version_code DESC
-        LIMIT 1
       `;
 
       const params = [
@@ -513,5 +525,13 @@ export class TursoDataService implements DataService {
   async deleteCondition(appId: string, conditionId: string): Promise<void> {
       await this.db.delete(schema.conditions)
         .where(and(eq(schema.conditions.id, conditionId), eq(schema.conditions.applicationId, appId)));
+  }
+
+  async logReleaseCheck(logData: Omit<ReleaseCheckLog, "id" | "createdAt">): Promise<void> {
+    await this.db.insert(schema.releaseCheckLogs).values({
+      id: randomUUID(),
+      createdAt: new Date(),
+      ...logData,
+    });
   }
 }

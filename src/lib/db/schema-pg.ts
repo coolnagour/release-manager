@@ -64,6 +64,22 @@ export const releaseConditions = pgTable('release_conditions', {
   pk: primaryKey({ columns: [table.releaseId, table.conditionId] })
 }));
 
+export const releaseCheckLogs = pgTable('release_check_logs', {
+  id: text('id').primaryKey(),
+  applicationId: text('application_id').notNull(),
+  createdAt: timestamp('created_at').notNull(),
+  country: text('country').notNull(),
+  companyId: integer('company_id').notNull(),
+  driverId: integer('driver_id').notNull(),
+  vehicleId: integer('vehicle_id').notNull(),
+  companyRef: text('company_ref'),
+  driverRef: text('driver_ref'),
+  vehicleRef: text('vehicle_ref'),
+  versionName: text('version_name').notNull(),
+  versionCode: integer('version_code').notNull(),
+});
+
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   applications: many(applicationUsers),
@@ -74,6 +90,7 @@ export const applicationsRelations = relations(applications, ({ many, one }) => 
   users: many(applicationUsers),
   conditions: many(conditions),
   releases: many(releases),
+  releaseCheckLogs: many(releaseCheckLogs),
 }));
 
 export const applicationUsersRelations = relations(applicationUsers, ({ one }) => ({
@@ -114,6 +131,14 @@ export const releaseConditionsRelations = relations(releaseConditions, ({ one })
   }),
 }));
 
+export const releaseCheckLogsRelations = relations(releaseCheckLogs, ({ one }) => ({
+  application: one(applications, {
+    fields: [releaseCheckLogs.applicationId],
+    references: [applications.id]
+  }),
+}));
+
+
 export const pgSchema = {
   users,
   applications,
@@ -121,10 +146,12 @@ export const pgSchema = {
   conditions,
   releases,
   releaseConditions,
+  releaseCheckLogs,
   usersRelations,
   applicationsRelations,
   applicationUsersRelations,
   conditionsRelations,
   releasesRelations,
   releaseConditionsRelations,
+  releaseCheckLogsRelations,
 };

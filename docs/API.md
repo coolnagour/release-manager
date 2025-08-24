@@ -13,9 +13,12 @@ This API endpoint checks if a driver needs to update their app version based on 
 {
   "appId": "uuid",
   "country": "string",
-  "company": "number",
-  "driver": "string", 
-  "vehicle": "string",
+  "companyId": "number",
+  "driverId": "number", 
+  "vehicleId": "number",
+  "companyRef": "string",
+  "driverRef": "string", 
+  "vehicleRef": "string",
   "versionName": "string",
   "versionCode": "number"
 }
@@ -26,9 +29,12 @@ This API endpoint checks if a driver needs to update their app version based on 
 **Query Parameters:**
 - `appId` (required) - Application UUID
 - `country` (required) - Country code (e.g., "IE", "US")
-- `company` (required) - Company ID number
-- `driver` (required) - Driver ID string
-- `vehicle` (required) - Vehicle ID string
+- `companyId` (required) - Company ID number
+- `driverId` (required) - Driver ID number
+- `vehicleId` (required) - Vehicle ID number
+- `companyRef` (optional) - Company reference string
+- `driverRef` (optional) - Driver reference string
+- `vehicleRef` (optional) - Vehicle reference string
 - `versionName` (required) - Current version name (e.g., "1.2.3")
 - `versionCode` (required) - Current version code number
 
@@ -107,9 +113,12 @@ curl -X POST http://localhost:3000/api/releases/check \
   -d '{
     "appId": "9d03314d-ab63-4493-8faa-a648ad65ebc9",
     "country": "IE",
-    "company": 1100,
-    "driver": "9999",
-    "vehicle": "9999", 
+    "companyId": 1100,
+    "driverId": 9999,
+    "vehicleId": 9999,
+    "companyRef": "comp-abc",
+    "driverRef": "driver-xyz",
+    "vehicleRef": "vehicle-123",
     "versionName": "1.2.0",
     "versionCode": 120
   }'
@@ -117,7 +126,7 @@ curl -X POST http://localhost:3000/api/releases/check \
 
 #### cURL GET
 ```bash
-curl "http://localhost:3000/api/releases/check?appId=9d03314d-ab63-4493-8faa-a648ad65ebc9&country=IE&company=1100&driver=9999&vehicle=9999&versionName=1.2.0&versionCode=120"
+curl "http://localhost:3000/api/releases/check?appId=9d03314d-ab63-4493-8faa-a648ad65ebc9&country=IE&companyId=1100&driverId=9999&vehicleId=9999&versionName=1.2.0&versionCode=120"
 ```
 
 ### Logic

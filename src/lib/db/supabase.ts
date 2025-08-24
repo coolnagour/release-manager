@@ -10,6 +10,7 @@ import { Release, ReleaseStatus } from "@/types/release";
 import { Condition } from "@/types/condition";
 import { randomUUID } from "crypto";
 import { and, count, desc, eq, inArray, sql, Param } from 'drizzle-orm';
+import { ReleaseCheckLog } from '@/types/release-check-log';
 
 export class SupabaseDataService implements DataService {
   private client: postgres.Sql<{}>;
@@ -25,7 +26,7 @@ export class SupabaseDataService implements DataService {
     });
     
     this.db = drizzle(this.client, { 
-      schema,
+      schema: schema.pgSchema,
       logger: process.env.NODE_ENV === 'development' ? {
         logQuery: (query, params) => {
           console.log('🔍 Supabase SQL Query:', query);
@@ -47,19 +48,6 @@ export class SupabaseDataService implements DataService {
       return appUserRoles
         .filter(u => u.email)
         .map(u => ({ email: u.email!, role: u.role }));
-  }
-
-  private async getUsers(emails: string[]): Promise<UserProfile[]> {
-      if (emails.length === 0) return [];
-      const users = await this.db.query.users.findMany({
-          where: inArray(schema.users.email, emails)
-      });
-      return users.map(u => ({
-          ...u,
-          displayName: u.displayName,
-          photoURL: u.photoUrl,
-          roles: {}, // Roles are app-specific, fetched separately
-      }));
   }
 
   async createApp(appData: Omit<Application, "id" | "createdAt">): Promise<Application> {
@@ -157,7 +145,7 @@ export class SupabaseDataService implements DataService {
                 let dbUser = await tx.query.users.findFirst({ where: eq(schema.users.email, user.email) });
                 if (!dbUser) {
                     const newUserId = randomUUID();
-                    await tx.insert(schema.users).values({ uid: newUserId, email: user.email, createdAt: new Date() });
+                    await tx.insert(schema.users).values({ uid: newUserId, email: user.email, isSuperAdmin: false, createdAt: new Date() });
                     dbUser = { uid: newUserId, email: user.email, displayName: null, photoUrl: null, isSuperAdmin: false, createdAt: new Date() };
                 }
                 await tx.insert(schema.applicationUsers).values({
@@ -199,7 +187,7 @@ export class SupabaseDataService implements DataService {
           throw new Error("A user with this email already exists.");
       }
 
-      const newUser: schema.User = {
+      const newUser = {
           uid: randomUUID(),
           email: userData.email,
           displayName: null,
@@ -212,8 +200,6 @@ export class SupabaseDataService implements DataService {
 
       return {
           ...newUser,
-          displayName: newUser.displayName,
-          photoURL: newUser.photoUrl,
           roles: {}, // No app roles initially
       };
   }
@@ -231,7 +217,19 @@ export class SupabaseDataService implements DataService {
         const [userCountResult] = await this.db.select({ count: count() }).from(schema.users);
         const isFirstUser = userCountResult.count === 0;
 
-        const newUser: schema.User = {
+        // If not first user, check if they are part of any application
+        if (!isFirstUser) {
+             const appUser = await this.db.query.applicationUsers.findFirst({
+                where: eq(schema.applicationUsers.userId, userData.uid)
+            });
+            if (!appUser) {
+                // If user is not associated with any app, do not create them
+                 console.warn(`Login blocked for ${userData.email} - not associated with any application.`);
+                return null;
+            }
+        }
+        
+        const newUser = {
             uid: userData.uid,
             email: userData.email,
             displayName: userData.displayName || null,
@@ -289,6 +287,7 @@ export class SupabaseDataService implements DataService {
               applicationId: appId,
               createdAt,
               ...restData,
+              status: restData.status
           });
 
           if(conditionIds && conditionIds.length > 0) {
@@ -383,33 +382,24 @@ export class SupabaseDataService implements DataService {
   }
 
   async getAvailableReleasesForContext(appId: string, context: { country: string; companyId: number; driverId: string; vehicleId: string }): Promise<Release[]> {
-      const query = `
+      const query = sql`
         SELECT DISTINCT r.id, r.application_id, r.version_name, r.version_code, r.status, r.created_at
-        FROM releases r
-        LEFT JOIN release_conditions rc ON r.id = rc.release_id
-        LEFT JOIN conditions c ON rc.condition_id = c.id
-        WHERE r.application_id = $1 AND r.status = $2
-          AND (c.countries IS NULL OR c.countries = '[]'::jsonb OR c.countries ? $3)
-          AND (c.companies IS NULL OR c.companies = '[]'::jsonb OR c.companies @> $4)
-          AND (c.drivers IS NULL OR c.drivers = '[]'::jsonb OR c.drivers ? $5)
-          AND (c.vehicles IS NULL OR c.vehicles ? $6)
+        FROM ${schema.releases} r
+        LEFT JOIN ${schema.releaseConditions} rc ON r.id = rc.release_id
+        LEFT JOIN ${schema.conditions} c ON rc.condition_id = c.id
+        WHERE r.application_id = ${appId} AND r.status = ${ReleaseStatus.ACTIVE}
+          AND (c.countries IS NULL OR jsonb_array_length(c.countries) = 0 OR c.countries ? ${context.country})
+          AND (c.companies IS NULL OR jsonb_array_length(c.companies) = 0 OR c.companies @> ${context.companyId}::jsonb)
+          AND (c.drivers IS NULL OR jsonb_array_length(c.drivers) = 0 OR c.drivers ? ${context.driverId})
+          AND (c.vehicles IS NULL OR jsonb_array_length(c.vehicles) = 0 OR c.vehicles ? ${context.vehicleId})
         ORDER BY r.version_code DESC
-        LIMIT 1
       `;
 
-      const params = [
-        appId, ReleaseStatus.ACTIVE,
-        context.country,
-        context.companyId,
-        context.driverId,
-        context.vehicleId
-      ];
-
-      const results = await this.client.unsafe(query, params);
+      const results = await this.db.execute(query);
       
       const releases: Release[] = [];
       for (const row of results) {
-        const releaseId = row.id;
+        const releaseId = row.id as string;
         
         const conditionResult = await this.db.select({ conditionId: schema.releaseConditions.conditionId })
           .from(schema.releaseConditions)
@@ -417,11 +407,11 @@ export class SupabaseDataService implements DataService {
         
         releases.push({
           id: releaseId,
-          applicationId: row.application_id,
-          versionName: row.version_name,
-          versionCode: row.version_code,
+          applicationId: row.application_id as string,
+          versionName: row.version_name as string,
+          versionCode: row.version_code as number,
           status: row.status as ReleaseStatus,
-          createdAt: new Date(row.created_at),
+          createdAt: new Date(row.created_at as string),
           conditionIds: conditionResult.map(cr => cr.conditionId),
         });
       }
@@ -435,7 +425,7 @@ export class SupabaseDataService implements DataService {
       await this.db.transaction(async (tx) => {
           if (Object.keys(releaseUpdates).length > 0) {
               await tx.update(schema.releases)
-                  .set(releaseUpdates)
+                  .set({...releaseUpdates, status: releaseUpdates.status})
                   .where(and(eq(schema.releases.id, releaseId), eq(schema.releases.applicationId, appId)));
           }
 
@@ -481,18 +471,18 @@ export class SupabaseDataService implements DataService {
       const id = randomUUID();
       const createdAt = new Date();
       
-      await this.db.insert(schema.conditions).values({
+      const [newCondition] = await this.db.insert(schema.conditions).values({
           id,
           applicationId: appId,
           name: conditionData.name,
-          countries: sql`${new Param(conditionData.countries || [])}::jsonb`,
-          companies: sql`${new Param(conditionData.companies || [])}::jsonb`,
-          drivers: sql`${new Param(conditionData.drivers || [])}::jsonb`,
-          vehicles: sql`${new Param(conditionData.vehicles || [])}::jsonb`,
+          countries: conditionData.countries || [],
+          companies: conditionData.companies || [],
+          drivers: conditionData.drivers || [],
+          vehicles: conditionData.vehicles || [],
           createdAt,
-      });
+      }).returning();
       
-      return { id, applicationId: appId, createdAt, ...conditionData };
+      return this.rowToCondition(newCondition);
   }
 
   async getCondition(appId: string, conditionId: string): Promise<Condition | null> {
@@ -515,27 +505,32 @@ export class SupabaseDataService implements DataService {
   }
 
   async updateCondition(appId: string, conditionId: string, updates: Partial<Omit<Condition, "id" | "createdAt" | "applicationId">>): Promise<Condition> {
-      const existing = await this.getCondition(appId, conditionId);
-      if(!existing) throw new Error("Condition not found");
-
-      await this.db.update(schema.conditions)
+      const [updatedCondition] = await this.db.update(schema.conditions)
           .set({
-              name: updates.name ?? existing.name,
-              countries: sql`${new Param(updates.countries ?? existing.countries)}::jsonb`,
-              companies: sql`${new Param(updates.companies ?? existing.companies)}::jsonb`,
-              drivers: sql`${new Param(updates.drivers ?? existing.drivers)}::jsonb`,
-              vehicles: sql`${new Param(updates.vehicles ?? existing.vehicles)}::jsonb`,
+              name: updates.name,
+              countries: updates.countries,
+              companies: updates.companies,
+              drivers: updates.drivers,
+              vehicles: updates.vehicles,
           })
-          .where(and(eq(schema.conditions.id, conditionId), eq(schema.conditions.applicationId, appId)));
+          .where(and(eq(schema.conditions.id, conditionId), eq(schema.conditions.applicationId, appId)))
+          .returning();
 
-      const condition = await this.getCondition(appId, conditionId);
-      if (!condition) throw new Error("Could not find condition after update");
-      return condition;
+      if (!updatedCondition) throw new Error("Could not find condition after update");
+      return this.rowToCondition(updatedCondition);
   }
 
   async deleteCondition(appId: string, conditionId: string): Promise<void> {
       await this.db.delete(schema.conditions)
         .where(and(eq(schema.conditions.id, conditionId), eq(schema.conditions.applicationId, appId)));
+  }
+
+  async logReleaseCheck(logData: Omit<ReleaseCheckLog, "id" | "createdAt">): Promise<void> {
+    await this.db.insert(schema.releaseCheckLogs).values({
+      id: randomUUID(),
+      createdAt: new Date(),
+      ...logData,
+    });
   }
 
   async close(): Promise<void> {

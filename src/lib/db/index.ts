@@ -6,6 +6,7 @@ import { Condition } from "@/types/condition";
 import { TursoDataService } from "./turso";
 import { SupabaseDataService } from "./supabase";
 import { Role } from "@/types/roles";
+import { ReleaseCheckLog } from "@/types/release-check-log";
 
 export interface DataService {
   createApp(appData: Omit<Application, "id" | "createdAt">): Promise<Application>;
@@ -31,6 +32,8 @@ export interface DataService {
   getConditionsForApp(appId: string): Promise<Condition[]>;
   updateCondition(appId: string, conditionId: string, updates: Partial<Omit<Condition, "id" | "createdAt" | "applicationId">>): Promise<Condition>;
   deleteCondition(appId: string, conditionId: string): Promise<void>;
+  
+  logReleaseCheck(logData: Omit<ReleaseCheckLog, "id" | "createdAt">): Promise<void>;
 }
 
 type DatabaseProvider = 'turso' | 'supabase';

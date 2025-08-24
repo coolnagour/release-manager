@@ -1,3 +1,6 @@
+-- Current sql file was generated after introspecting the database
+-- If you want to run this migration please uncomment this code before executing migrations
+/*
 CREATE TABLE `applications` (
 	`id` text PRIMARY KEY NOT NULL,
 	`name` text NOT NULL,
@@ -10,6 +13,7 @@ CREATE TABLE `applications` (
 CREATE TABLE `application_users` (
 	`application_id` text NOT NULL,
 	`user_id` text NOT NULL,
+	`role` text DEFAULT 'user' NOT NULL,
 	PRIMARY KEY(`application_id`, `user_id`),
 	FOREIGN KEY (`application_id`) REFERENCES `applications`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`user_id`) REFERENCES `users`(`uid`) ON UPDATE no action ON DELETE cascade
@@ -50,8 +54,9 @@ CREATE TABLE `users` (
 	`email` text,
 	`display_name` text,
 	`photo_url` text,
-	`role` text DEFAULT 'user' NOT NULL,
+	`is_super_admin` integer DEFAULT false NOT NULL,
 	`created_at` integer DEFAULT (strftime('%s', 'now')) NOT NULL
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `users_email_unique` ON `users` (`email`);
+*/
