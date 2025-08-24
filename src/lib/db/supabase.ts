@@ -177,7 +177,7 @@ export class SupabaseDataService implements DataService {
     await this.db.delete(schema.applications).where(eq(schema.applications.id, id));
   }
   
-  async getUser(uid: string): Promise<(Omit<UserProfile, 'roles'> & { role: null }) | null> {
+  async getUser(uid: string): Promise<Omit<UserProfile, 'roles'> | null> {
     const user = await this.db.query.users.findFirst({
         where: eq(schema.users.uid, uid)
     });
@@ -186,7 +186,6 @@ export class SupabaseDataService implements DataService {
         ...user,
         displayName: user.displayName,
         photoURL: user.photoUrl,
-        role: null, // Global role is deprecated
     };
   }
 
@@ -381,7 +380,7 @@ export class SupabaseDataService implements DataService {
           AND (c.countries IS NULL OR c.countries = '[]'::jsonb OR c.countries ? $3)
           AND (c.companies IS NULL OR c.companies = '[]'::jsonb OR c.companies @> $4)
           AND (c.drivers IS NULL OR c.drivers = '[]'::jsonb OR c.drivers ? $5)
-          AND (c.vehicles IS NULL OR c.vehicles = '[]'::jsonb OR c.vehicles ? $6)
+          AND (c.vehicles IS NULL OR c.vehicles ? $6)
         ORDER BY r.version_code DESC
         LIMIT 1
       `;
@@ -531,3 +530,5 @@ export class SupabaseDataService implements DataService {
     await this.client.end();
   }
 }
+
+    
