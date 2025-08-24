@@ -126,7 +126,7 @@ curl -X POST http://localhost:3000/api/releases/check \
 
 #### cURL GET
 ```bash
-curl "http://localhost:3000/api/releases/check?appId=9d03314d-ab63-4493-8faa-a648ad65ebc9&country=IE&companyId=1100&driverId=9999&vehicleId=9999&versionName=1.2.0&versionCode=120"
+curl "http://localhost:3000/api/releases/check?appId=9d03314d-ab63-4493-8faa-a648ad65ebc9&country=IE&companyId=1100&driverId=9999&vehicleId=9999&companyRef=comp-abc&driverRef=driver-xyz&vehicleRef=vehicle-123&versionName=1.2.0&versionCode=120"
 ```
 
 ### Logic
@@ -141,3 +141,5 @@ The release matching follows the same logic as the web interface:
 - Releases with no conditions are available to all drivers
 - Releases with conditions are only available if all conditions match the driver's context
 - The highest version code release that matches is considered the "latest available"
+
+```
