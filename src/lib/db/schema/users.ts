@@ -1,6 +1,6 @@
 
 import { relations, sql } from "drizzle-orm";
-import { integer, sqliteTable, text, boolean } from "drizzle-orm/sqlite-core";
+import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { applicationUsers } from "./application-users";
 
 export const users = sqliteTable('users', {
@@ -8,7 +8,7 @@ export const users = sqliteTable('users', {
   email: text('email').unique(),
   displayName: text('display_name'),
   photoUrl: text('photo_url'),
-  isSuperAdmin: boolean('is_super_admin').notNull().default(false),
+  isSuperAdmin: integer('is_super_admin', { mode: 'boolean' }).notNull().default(false),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(strftime('%s', 'now'))`),
 });
 
