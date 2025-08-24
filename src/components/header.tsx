@@ -37,20 +37,12 @@ export function Header() {
             {loading ? (
               <Skeleton className="h-10 w-36 rounded-md" />
             ) : userProfile?.isSuperAdmin ? (
-              <>
-                <Button asChild variant="outline">
-                  <Link href="/admin/users">
-                    <Users className="mr-2 h-4 w-4" />
-                    Manage Users
-                  </Link>
-                </Button>
                 <Button asChild style={{ backgroundColor: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))" }}>
                   <Link href="/app/new">
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Create New App
                   </Link>
                 </Button>
-              </>
             ) : null}
             
             {loading ? (
@@ -77,6 +69,14 @@ export function Header() {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
+                   {userProfile?.isSuperAdmin && (
+                    <DropdownMenuItem asChild>
+                      <Link href="/admin/users">
+                        <Users className="mr-2 h-4 w-4" />
+                        <span>Manage Users</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem>
                     <Settings className="mr-2 h-4 w-4" />
                     <span>Settings</span>
