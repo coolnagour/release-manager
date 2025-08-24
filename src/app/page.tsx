@@ -23,6 +23,8 @@ function AppPage() {
   const [apps, setApps] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const isSuperAdmin = userProfile && Object.values(userProfile.roles).includes(Role.SUPERADMIN);
+
   useEffect(() => {
     if (user?.uid) {
       getAppsForUser(user.uid)
@@ -55,7 +57,7 @@ function AppPage() {
         ) : apps.length === 0 ? (
           <p>
             No applications found.
-            {userProfile?.role === Role.SUPERADMIN && (
+            {isSuperAdmin && (
               <Link href="/app/new" className="text-primary hover:underline ml-1">
                 Create one now
               </Link>

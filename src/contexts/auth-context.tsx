@@ -69,7 +69,7 @@ const createMockUserProfile = (email: string): UserProfile => ({
     email: email,
     displayName: `Mock User (${email.split('@')[0]})`,
     photoURL: "https://placehold.co/100x100.png",
-    role: Role.SUPERADMIN,
+    roles: { "mock-app-id": Role.SUPERADMIN }, // Mock role for a mock app
     createdAt: new Date(),
 });
 
@@ -97,12 +97,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           displayName: user.displayName,
           photoURL: user.photoURL,
         });
-
+        
         if (profile) {
           setUserProfile(profile);
           setUser(user);
         } else {
-          // User is not allowed, sign them out.
           await signOut(auth);
           setUser(null);
           setUserProfile(null);

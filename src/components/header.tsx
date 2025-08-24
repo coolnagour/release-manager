@@ -25,6 +25,8 @@ export function Header() {
   const handleLogout = async () => {
     await logout();
   };
+  
+  const isSuperAdmin = userProfile && Object.values(userProfile.roles).includes(Role.SUPERADMIN);
 
   return (
     <header className="bg-card border-b sticky top-0 z-10">
@@ -37,7 +39,7 @@ export function Header() {
           <div className="flex items-center gap-4">
             {loading ? (
               <Skeleton className="h-10 w-36 rounded-md" />
-            ) : user && userProfile?.role === Role.SUPERADMIN ? (
+            ) : user && isSuperAdmin ? (
               <Button asChild style={{ backgroundColor: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))" }}>
                 <Link href="/app/new">
                   <PlusCircle className="mr-2 h-4 w-4" />

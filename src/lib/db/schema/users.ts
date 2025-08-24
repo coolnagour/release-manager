@@ -1,3 +1,4 @@
+
 import { relations, sql } from "drizzle-orm";
 import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { Role } from "@/types/roles";
@@ -8,7 +9,6 @@ export const users = sqliteTable('users', {
   email: text('email').unique(),
   displayName: text('display_name'),
   photoUrl: text('photo_url'),
-  role: text('role').notNull().default(Role.USER),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(strftime('%s', 'now'))`),
 });
 

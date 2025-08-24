@@ -5,6 +5,7 @@ import { UserProfile } from "@/types/user-profile";
 import { Condition } from "@/types/condition";
 import { TursoDataService } from "./turso";
 import { SupabaseDataService } from "./supabase";
+import { Role } from "@/types/roles";
 
 export interface DataService {
   createApp(appData: Omit<Application, "id" | "createdAt">): Promise<Application>;
@@ -13,7 +14,7 @@ export interface DataService {
   updateApp(id: string, updates: Partial<Omit<Application, "id" | "ownerId" | "createdAt">>): Promise<Application>;
   deleteApp(id: string): Promise<void>;
   findOrCreateUser(user: Pick<UserProfile, "uid" | "email" | "displayName" | "photoURL">): Promise<UserProfile | null>;
-  getSuperAdminsForApp(userIds: string[]): Promise<UserProfile[]>;
+  getUser(uid: string): Promise<(Omit<UserProfile, 'roles'> & { role: Role | null }) | null>;
 
   createRelease(appId: string, releaseData: Omit<Release, "id" | "createdAt" | "applicationId">): Promise<Release>;
   getRelease(appId: string, releaseId: string): Promise<Release | null>;

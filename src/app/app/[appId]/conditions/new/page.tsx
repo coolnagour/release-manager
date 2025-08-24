@@ -5,9 +5,6 @@ import { ConditionForm } from "@/components/condition-form";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { useAuth } from "@/contexts/auth-context";
 import { useParams, useRouter } from "next/navigation";
@@ -24,8 +21,9 @@ function NewConditionPage() {
   const appId = Array.isArray(params.appId) ? params.appId[0] : params.appId;
 
   useEffect(() => {
-    if (!loading) {
-      const canManage = userProfile?.role === Role.SUPERADMIN || userProfile?.role === Role.ADMIN;
+    if (!loading && userProfile) {
+      const userRoleForApp = userProfile.roles?.[appId];
+      const canManage = userRoleForApp === Role.SUPERADMIN || userRoleForApp === Role.ADMIN;
       if (!canManage) {
         router.replace(`/app/${appId}/conditions`);
       }

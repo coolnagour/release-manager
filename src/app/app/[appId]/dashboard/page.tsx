@@ -17,7 +17,7 @@ import {
 
 function AppDashboardPage() {
   const params = useParams();
-  const { user } = useAuth();
+  const { userProfile } = useAuth();
   const [app, setApp] = useState<Application | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -25,15 +25,17 @@ function AppDashboardPage() {
   const appId = Array.isArray(params.appId) ? params.appId[0] : params.appId;
 
   useEffect(() => {
-    if (appId && user?.email) {
+    if (appId && userProfile) {
+      if (!userProfile.roles?.[appId]) {
+        setError("You are not authorized to view this application.");
+        setLoading(false);
+        return;
+      }
+
       getApp(appId)
         .then((data) => {
           if (data) {
-            if (!data.users.includes(user.email!)) {
-              setError("You are not authorized to view this application.");
-            } else {
-              setApp(data);
-            }
+            setApp(data);
           } else {
             setError("Application not found.");
           }
@@ -46,7 +48,7 @@ function AppDashboardPage() {
           setLoading(false);
         });
     }
-  }, [appId, user]);
+  }, [appId, userProfile]);
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">

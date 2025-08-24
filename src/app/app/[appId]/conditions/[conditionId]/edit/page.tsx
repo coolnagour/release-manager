@@ -28,8 +28,9 @@ function EditConditionPage() {
   const conditionId = Array.isArray(params.conditionId) ? params.conditionId[0] : params.conditionId;
 
   useEffect(() => {
-    if (!authLoading) {
-      const canManage = userProfile?.role === Role.SUPERADMIN || userProfile?.role === Role.ADMIN;
+    if (!authLoading && userProfile) {
+      const userRoleForApp = userProfile.roles?.[appId];
+      const canManage = userRoleForApp === Role.SUPERADMIN || userRoleForApp === Role.ADMIN;
       if (!canManage) {
         router.replace(`/app/${appId}/conditions`);
         return;

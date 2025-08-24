@@ -5,9 +5,6 @@ import { CreateAppForm } from "@/components/create-app-form";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { useAuth } from "@/contexts/auth-context";
 import { useParams, useRouter } from "next/navigation";
@@ -27,9 +24,10 @@ function EditAppPage() {
   const appId = Array.isArray(params.appId) ? params.appId[0] : params.appId;
 
   useEffect(() => {
-    if (!authLoading) {
-        if (!userProfile || (userProfile.role !== Role.SUPERADMIN && userProfile.role !== Role.ADMIN)) {
-            router.replace('/');
+    if (!authLoading && userProfile) {
+        const userRoleForApp = userProfile.roles?.[appId];
+        if (userRoleForApp !== Role.SUPERADMIN && userRoleForApp !== Role.ADMIN) {
+            router.replace(`/app/${appId}/dashboard`);
             return;
         }
     }
@@ -49,17 +47,12 @@ function EditAppPage() {
 
   const isLoading = authLoading || loading;
 
-
   if (isLoading) {
     return (
         <div className="p-4 sm:p-6 lg:p-8 flex flex-col flex-1">
             <Skeleton className="h-8 w-48 mb-2" />
             <Skeleton className="h-4 w-64 mb-6" />
             <Card className="w-full shadow-lg flex-1">
-                <CardHeader>
-                  <Skeleton className="h-7 w-1/2" />
-                  <Skeleton className="h-4 w-3/4" />
-                </CardHeader>
                 <CardContent className="space-y-8 pt-6">
                     <div className="space-y-2">
                         <Skeleton className="h-4 w-24" />
@@ -87,7 +80,6 @@ function EditAppPage() {
     )
   }
 
-
   return (
       <div className="p-4 sm:p-6 lg:p-8 flex flex-col flex-1">
           <div className="mb-6">
@@ -104,5 +96,3 @@ function EditAppPage() {
 }
 
 export default EditAppPage;
-
-    

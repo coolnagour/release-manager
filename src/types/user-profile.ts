@@ -6,6 +6,6 @@ export interface UserProfile {
   email: string | null;
   displayName: string | null;
   photoURL: string | null;
-  role: Role;
+  roles: { [appId: string]: Role };
   createdAt: Date;
 }

@@ -3,7 +3,7 @@ import { drizzle, PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import * as schema from './schema-pg';
 import { DataService } from ".";
-import { Application } from "@/types/application";
+import { Application, ApplicationUser } from "@/types/application";
 import { UserProfile } from "@/types/user-profile";
 import { Role } from "@/types/roles";
 import { Release, ReleaseStatus } from "@/types/release";
@@ -20,7 +20,6 @@ export class SupabaseDataService implements DataService {
         throw new Error("Supabase database URL is required.");
     }
     
-    // Create postgres client
     this.client = postgres(process.env.SUPABASE_DATABASE_URL, {
       prepare: false
     });
@@ -36,17 +35,21 @@ export class SupabaseDataService implements DataService {
     });
   }
 
-  // Helper to get user emails for an application
-  private async getAppUserEmails(appId: string): Promise<string[]> {
-      const users = await this.db.select({ email: schema.users.email })
+  private async getAppUsers(appId: string): Promise<ApplicationUser[]> {
+      const appUserRoles = await this.db.select({ 
+          email: schema.users.email,
+          role: schema.applicationUsers.role
+        })
           .from(schema.users)
           .innerJoin(schema.applicationUsers, eq(schema.users.uid, schema.applicationUsers.userId))
           .where(eq(schema.applicationUsers.applicationId, appId));
 
-      return users.map(u => u.email).filter((e): e is string => e !== null);
+      return appUserRoles
+        .filter(u => u.email)
+        .map(u => ({ email: u.email!, role: u.role }));
   }
 
-  private async getUsersFromEmails(emails: string[]): Promise<UserProfile[]> {
+  private async getUsers(emails: string[]): Promise<UserProfile[]> {
       if (emails.length === 0) return [];
       const users = await this.db.query.users.findMany({
           where: inArray(schema.users.email, emails)
@@ -55,7 +58,7 @@ export class SupabaseDataService implements DataService {
           ...u,
           displayName: u.displayName,
           photoURL: u.photoUrl,
-          role: u.role as Role,
+          roles: {}, // Roles are app-specific, fetched separately
       }));
   }
 
@@ -63,9 +66,6 @@ export class SupabaseDataService implements DataService {
     const id = randomUUID();
     const createdAt = new Date();
     
-    const userProfiles = await this.getUsersFromEmails(appData.users);
-    const userIds = userProfiles.map(u => u.uid);
-
     await this.db.transaction(async (tx) => {
         await tx.insert(schema.applications).values({
             id,
@@ -74,14 +74,24 @@ export class SupabaseDataService implements DataService {
             ownerId: appData.ownerId,
             createdAt,
         });
-
-        if (userIds.length > 0) {
-            await tx.insert(schema.applicationUsers).values(
-                userIds.map(userId => ({
-                    applicationId: id,
-                    userId: userId,
-                }))
-            );
+        
+        for (const user of appData.users) {
+            let dbUser = await tx.query.users.findFirst({ where: eq(schema.users.email, user.email) });
+            if (!dbUser) {
+                // Create a placeholder user
+                const newUserId = randomUUID();
+                await tx.insert(schema.users).values({
+                    uid: newUserId,
+                    email: user.email,
+                    createdAt: new Date(),
+                });
+                dbUser = { uid: newUserId, email: user.email, displayName: null, photoUrl: null, createdAt: new Date() };
+            }
+            await tx.insert(schema.applicationUsers).values({
+                applicationId: id,
+                userId: dbUser.uid,
+                role: user.role,
+            });
         }
     });
 
@@ -94,7 +104,7 @@ export class SupabaseDataService implements DataService {
     });
     if (!app) return null;
 
-    const users = await this.getAppUserEmails(id);
+    const users = await this.getAppUsers(id);
 
     return {
         id: app.id,
@@ -126,7 +136,7 @@ export class SupabaseDataService implements DataService {
 
     const result: Application[] = [];
     for (const app of appsData) {
-        const users = await this.getAppUserEmails(app.id);
+        const users = await this.getAppUsers(app.id);
         result.push({ ...app, users });
     }
     return result;
@@ -141,19 +151,19 @@ export class SupabaseDataService implements DataService {
         }
 
         if (updates.users) {
-            const userProfiles = await this.getUsersFromEmails(updates.users);
-            const userIds = userProfiles.map(u => u.uid);
-
-            await tx.delete(schema.applicationUsers)
-                .where(eq(schema.applicationUsers.applicationId, id));
-            
-            if (userIds.length > 0) {
-                await tx.insert(schema.applicationUsers).values(
-                    userIds.map(userId => ({
-                        applicationId: id,
-                        userId: userId,
-                    }))
-                );
+            await tx.delete(schema.applicationUsers).where(eq(schema.applicationUsers.applicationId, id));
+            for (const user of updates.users) {
+                let dbUser = await tx.query.users.findFirst({ where: eq(schema.users.email, user.email) });
+                if (!dbUser) {
+                    const newUserId = randomUUID();
+                    await tx.insert(schema.users).values({ uid: newUserId, email: user.email, createdAt: new Date() });
+                    dbUser = { uid: newUserId, email: user.email, displayName: null, photoUrl: null, createdAt: new Date() };
+                }
+                await tx.insert(schema.applicationUsers).values({
+                    applicationId: id,
+                    userId: dbUser.uid,
+                    role: user.role,
+                });
             }
         }
     });
@@ -166,84 +176,95 @@ export class SupabaseDataService implements DataService {
   async deleteApp(id: string): Promise<void> {
     await this.db.delete(schema.applications).where(eq(schema.applications.id, id));
   }
+  
+  async getUser(uid: string): Promise<(Omit<UserProfile, 'roles'> & { role: null }) | null> {
+    const user = await this.db.query.users.findFirst({
+        where: eq(schema.users.uid, uid)
+    });
+    if (!user) return null;
+    return {
+        ...user,
+        displayName: user.displayName,
+        photoURL: user.photoUrl,
+        role: null, // Global role is deprecated
+    };
+  }
 
   async findOrCreateUser(userData: Pick<UserProfile, "uid" | "email" | "displayName" | "photoURL">): Promise<UserProfile | null> {
     if (!userData.email) {
       throw new Error("User email cannot be null.");
     }
     
-    const existingUser = await this.db.query.users.findFirst({
+    let existingUser = await this.db.query.users.findFirst({
         where: eq(schema.users.uid, userData.uid),
     });
 
-    if (existingUser) {
-        return {
-            ...existingUser,
-            displayName: existingUser.displayName,
-            photoURL: existingUser.photoUrl,
-            role: existingUser.role as Role,
+    if (!existingUser) {
+        const [userCountResult] = await this.db.select({ count: count() }).from(schema.users);
+        const isFirstUser = userCountResult.count === 0;
+
+        if (!isFirstUser) {
+             const userInAnyApp = await this.db.select({ userId: schema.applicationUsers.userId })
+                .from(schema.applicationUsers)
+                .leftJoin(schema.users, eq(schema.applicationUsers.userId, schema.users.uid))
+                .where(eq(schema.users.email, userData.email))
+                .limit(1);
+
+             if (userInAnyApp.length === 0) {
+                 console.log(`Login blocked for ${userData.email}: Not associated with any application.`);
+                 return null; // Block user creation/login
+             }
+        }
+
+        const newUser: schema.User = {
+            uid: userData.uid,
+            email: userData.email,
+            displayName: userData.displayName || null,
+            photoUrl: userData.photoURL || null,
+            createdAt: new Date(),
         };
+
+        await this.db.insert(schema.users).values(newUser).onConflictDoUpdate({
+            target: schema.users.uid,
+            set: { displayName: newUser.displayName, photoUrl: newUser.photoUrl }
+        });
+        existingUser = newUser;
+
+        // If first user, make them superadmin of all existing apps (if any)
+        if (isFirstUser) {
+            const allApps = await this.db.select({ id: schema.applications.id }).from(schema.applications);
+            if (allApps.length > 0) {
+                await this.db.insert(schema.applicationUsers).values(
+                    allApps.map(app => ({
+                        applicationId: app.id,
+                        userId: userData.uid,
+                        role: Role.SUPERADMIN
+                    }))
+                ).onConflictDoUpdate({
+                    target: [schema.applicationUsers.applicationId, schema.applicationUsers.userId],
+                    set: { role: Role.SUPERADMIN }
+                });
+            }
+        }
     }
 
-    const [userCountResult] = await this.db.select({ count: count() }).from(schema.users);
-    const isFirstUser = userCountResult.count === 0;
-
-    if (!isFirstUser) {
-      const userInAnyApp = await this.db.select({ userId: schema.applicationUsers.userId })
-        .from(schema.applicationUsers)
-        .leftJoin(schema.users, eq(schema.applicationUsers.userId, schema.users.uid))
-        .where(eq(schema.users.email, userData.email))
-        .limit(1);
-      
-      if (userInAnyApp.length === 0) {
-        console.log(`Login blocked for ${userData.email}: Not associated with any application.`);
-        return null; // Block user creation
-      }
-    }
-
-    const role = isFirstUser ? Role.SUPERADMIN : Role.USER;
-    const createdAt = new Date();
-
-    const newUser: Omit<UserProfile, 'displayName' | 'photoURL'> & { displayName: string | null, photoUrl: string | null } = {
-        uid: userData.uid,
-        email: userData.email,
-        displayName: userData.displayName || null,
-        photoUrl: userData.photoURL || null,
-        role,
-        createdAt
-    };
-
-    await this.db.insert(schema.users).values(newUser).onConflictDoNothing();
-    
-    const finalUser = await this.db.query.users.findFirst({ where: eq(schema.users.uid, userData.uid) });
-    
-    if (!finalUser) {
-        return null;
-    }
-
-    return {
-        ...finalUser,
-        displayName: finalUser.displayName,
-        photoURL: finalUser.photoUrl,
-        role: finalUser.role as Role,
-    };
-  }
-  
-  async getSuperAdminsForApp(userIds: string[]): Promise<UserProfile[]> {
-    if (userIds.length === 0) return [];
-    const superAdmins = await this.db.query.users.findMany({
-        where: and(
-            inArray(schema.users.uid, userIds),
-            eq(schema.users.role, Role.SUPERADMIN)
-        )
+    const userRoles = await this.db.query.applicationUsers.findMany({
+        where: eq(schema.applicationUsers.userId, userData.uid)
     });
 
-    return superAdmins.map(u => ({
-        ...u,
-        displayName: u.displayName,
-        photoURL: u.photoUrl,
-        role: u.role as Role,
-    }));
+    const rolesMap: { [appId: string]: Role } = {};
+    userRoles.forEach(ur => {
+        rolesMap[ur.applicationId] = ur.role;
+    });
+
+    return {
+        uid: existingUser.uid,
+        email: existingUser.email,
+        displayName: existingUser.displayName,
+        photoURL: existingUser.photoUrl,
+        roles: rolesMap,
+        createdAt: existingUser.createdAt,
+    };
   }
 
   async createRelease(appId: string, releaseData: Omit<Release, "id" | "createdAt" | "applicationId">): Promise<Release> {
@@ -351,11 +372,6 @@ export class SupabaseDataService implements DataService {
   }
 
   async getAvailableReleasesForContext(appId: string, context: { country: string; companyId: number; driverId: string; vehicleId: string }): Promise<Release[]> {
-      // Use a performant SQL query with the normalized schema to find releases that match the context
-      // This implements the logic: A release is available if:
-      // 1. It has no conditions (available to all contexts), OR
-      // 2. All of its conditions match the given context
-      
       const query = `
         SELECT DISTINCT r.id, r.application_id, r.version_name, r.version_code, r.status, r.created_at
         FROM releases r
@@ -372,29 +388,18 @@ export class SupabaseDataService implements DataService {
 
       const params = [
         appId, ReleaseStatus.ACTIVE,
-        context.country,  // $3
-        context.companyId,  // $4 
-        context.driverId,  // $5
-        context.vehicleId   // $6
+        context.country,
+        context.companyId,
+        context.driverId,
+        context.vehicleId
       ];
 
-      console.log('🔍 getAvailableReleasesForContext Query (Supabase):', query);
-      console.log('📋 Parameters:', params);
-
-      // Execute the query using raw SQL with postgres
       const results = await this.client.unsafe(query, params);
       
-      console.log('📊 getAvailableReleasesForContext Results:', {
-        rowCount: results.length,
-        rawRows: results,
-      });
-      
-      // Convert results to Release objects
       const releases: Release[] = [];
       for (const row of results) {
         const releaseId = row.id;
         
-        // Get condition IDs for this release using Drizzle
         const conditionResult = await this.db.select({ conditionId: schema.releaseConditions.conditionId })
           .from(schema.releaseConditions)
           .where(eq(schema.releaseConditions.releaseId, releaseId));
@@ -522,7 +527,6 @@ export class SupabaseDataService implements DataService {
         .where(and(eq(schema.conditions.id, conditionId), eq(schema.conditions.applicationId, appId)));
   }
 
-  // Clean up method to close connections
   async close(): Promise<void> {
     await this.client.end();
   }

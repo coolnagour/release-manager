@@ -19,14 +19,16 @@ function CreateAppPage() {
   const { userProfile, loading } = useAuth();
   const router = useRouter();
 
+  // A user can create an app if they are a superadmin in any capacity.
+  const isSuperAdmin = Object.values(userProfile?.roles ?? {}).includes(Role.SUPERADMIN);
+
   useEffect(() => {
-    if (!loading && userProfile?.role !== Role.SUPERADMIN) {
+    if (!loading && !isSuperAdmin) {
       router.replace('/');
     }
-  }, [userProfile, loading, router]);
+  }, [userProfile, loading, router, isSuperAdmin]);
 
-
-  if (loading || userProfile?.role !== Role.SUPERADMIN) {
+  if (loading || !isSuperAdmin) {
     return (
        <div className="flex flex-col min-h-screen">
         <Header />

@@ -1,3 +1,4 @@
+
 import {
   pgTable,
   text,
@@ -7,6 +8,7 @@ import {
   primaryKey,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
+import { Role } from '@/types/roles';
 
 // PostgreSQL schema for Supabase
 export const users = pgTable('users', {
@@ -14,7 +16,6 @@ export const users = pgTable('users', {
   email: text('email'),
   displayName: text('display_name'),
   photoUrl: text('photo_url'),
-  role: text('role').notNull(),
   createdAt: timestamp('created_at').notNull(),
 });
 
@@ -29,6 +30,7 @@ export const applications = pgTable('applications', {
 export const applicationUsers = pgTable('application_users', {
   applicationId: text('application_id').notNull(),
   userId: text('user_id').notNull(),
+  role: text('role').$type<Role>().notNull().default(Role.USER),
 }, (table) => ({
   pk: primaryKey({ columns: [table.applicationId, table.userId] })
 }));

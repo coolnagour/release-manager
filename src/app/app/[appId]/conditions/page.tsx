@@ -56,8 +56,9 @@ function ConditionsPage() {
   const [isPending, startTransition] = useTransition();
 
   const appId = Array.isArray(params.appId) ? params.appId[0] : params.appId;
+  const userRoleForApp = userProfile?.roles?.[appId];
 
-  const canManageConditions = userProfile?.role === Role.SUPERADMIN || userProfile?.role === Role.ADMIN;
+  const canManageConditions = userRoleForApp === Role.SUPERADMIN || userRoleForApp === Role.ADMIN;
 
   const fetchConditions = () => {
     if (appId) {

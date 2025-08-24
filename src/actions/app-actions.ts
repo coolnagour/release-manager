@@ -2,12 +2,16 @@
 "use server";
 
 import { z } from "zod";
-import { auth } from "firebase-admin";
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
-import { Application } from "@/types/application";
+import { Application, ApplicationUser } from "@/types/application";
 import { UserProfile } from "@/types/user-profile";
 import { Role } from "@/types/roles";
+
+const userSchema = z.object({
+  email: z.string().email(),
+  role: z.nativeEnum(Role),
+});
 
 const formSchema = z.object({
   appName: z.string().min(2, {
@@ -21,9 +25,7 @@ const formSchema = z.object({
     .regex(/^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+[0-9a-z_]$/i, {
       message: "Invalid package name format.",
     }),
-  users: z.string().min(1, {
-    message: "Please enter at least one email address.",
-  }),
+  users: z.array(userSchema),
 });
 
 export async function createApp(values: z.infer<typeof formSchema>, ownerId: string, ownerEmail: string) {
@@ -37,18 +39,24 @@ export async function createApp(values: z.infer<typeof formSchema>, ownerId: str
 
   const { appName, packageName, users } = validatedFields.data;
 
-  const emailList = users.split(",").map((email) => email.trim()).filter(email => email);
-
-  if (!emailList.includes(ownerEmail)) {
-    emailList.push(ownerEmail);
+  // Ensure the owner is always in the list as a superadmin
+  const ownerInList = users.some(u => u.email === ownerEmail);
+  if (!ownerInList) {
+    users.push({ email: ownerEmail, role: Role.SUPERADMIN });
+  } else {
+    // Make sure the owner's role is superadmin
+    const ownerEntry = users.find(u => u.email === ownerEmail);
+    if (ownerEntry) {
+      ownerEntry.role = Role.SUPERADMIN;
+    }
   }
 
   try {
     await db.createApp({
       name: appName,
       packageName,
-      users: emailList,
       ownerId,
+      users,
     });
   } catch (error) {
     console.error("Failed to create application:", error);
@@ -64,7 +72,7 @@ export async function createApp(values: z.infer<typeof formSchema>, ownerId: str
   };
 }
 
-export async function updateApp(appId: string, values: z.infer<typeof formSchema>, user: UserProfile) {
+export async function updateApp(appId: string, values: z.infer<typeof formSchema>, currentUser: UserProfile) {
     const validatedFields = formSchema.safeParse(values);
 
     if (!validatedFields.success) {
@@ -78,40 +86,43 @@ export async function updateApp(appId: string, values: z.infer<typeof formSchema
         return { error: "App not found." };
     }
     
-    if (!user.email || !app.users.includes(user.email)) {
+    const currentUserRoleInApp = currentUser.roles?.[appId];
+    if (!currentUserRoleInApp) {
         return { error: "Unauthorized." };
     }
 
-    const { appName, packageName, users } = validatedFields.data;
-    const newEmailList = users.split(",").map((email) => email.trim());
-
-    if (!newEmailList.includes(user.email)) {
+    const { appName, packageName, users: newUsers } = validatedFields.data;
+    
+    // Ensure the current user cannot remove themselves
+    if (!newUsers.some(u => u.email === currentUser.email)) {
         return { error: "You cannot remove yourself from an application." };
     }
-
-    if (user.role !== Role.SUPERADMIN) {
-        const originalSuperAdmins = await db.getSuperAdminsForApp(app.users);
-        const originalSuperAdminEmails = originalSuperAdmins.map(u => u.email);
-
-        for (const saEmail of originalSuperAdminEmails) {
-            if (saEmail && !newEmailList.includes(saEmail)) {
-                return {
-                    error: "Admins cannot remove Super Admins from an application."
-                }
-            }
-        }
+    
+    // Ensure owner is not removed
+    const owner = await db.getUser(app.ownerId);
+    if (owner?.email && !newUsers.some(u => u.email === owner.email)) {
+        newUsers.push({ email: owner.email, role: Role.SUPERADMIN });
     }
     
-    const owner = await auth().getUser(app.ownerId);
-    if (owner.email && !newEmailList.includes(owner.email)) {
-        newEmailList.push(owner.email);
+    // Admins cannot remove or demote Super Admins
+    if (currentUserRoleInApp === Role.ADMIN) {
+        const originalSuperAdmins = app.users.filter(u => u.role === Role.SUPERADMIN);
+        for (const sa of originalSuperAdmins) {
+            const newUserEntry = newUsers.find(u => u.email === sa.email);
+            if (!newUserEntry) {
+                return { error: `Admins cannot remove Super Admin "${sa.email}".` };
+            }
+            if (newUserEntry.role !== Role.SUPERADMIN) {
+                 return { error: `Admins cannot change the role of Super Admin "${sa.email}".` };
+            }
+        }
     }
 
     try {
         await db.updateApp(appId, {
             name: appName,
             packageName,
-            users: newEmailList,
+            users: newUsers,
         });
     } catch (error) {
         console.error("Failed to update application:", error);

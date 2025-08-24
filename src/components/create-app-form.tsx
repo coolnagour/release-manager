@@ -25,6 +25,13 @@ import { Application } from "@/types/application";
 import { Role } from "@/types/roles";
 import { Trash } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+
+
+const userSchema = z.object({
+  email: z.string().email({ message: "Invalid email address." }),
+  role: z.nativeEnum(Role),
+});
 
 const formSchema = z.object({
   appName: z.string().min(2, {
@@ -38,7 +45,7 @@ const formSchema = z.object({
     .regex(/^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+[0-9a-z_]$/i, {
       message: "Invalid package name format.",
     }),
-  users: z.array(z.object({ value: z.string().email({ message: "Invalid email address." })})),
+  users: z.array(userSchema),
 });
 
 interface CreateAppFormProps {
@@ -59,11 +66,11 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
     defaultValues: {
       appName: application?.name || "",
       packageName: application?.packageName || "",
-      users: application?.users.map(email => ({ value: email })) || (user?.email ? [{ value: user.email }] : []),
+      users: application?.users || (user?.email ? [{ email: user.email, role: Role.SUPERADMIN }] : []),
     },
   });
 
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove, update } = useFieldArray({
       control: form.control,
       name: "users",
   });
@@ -78,20 +85,10 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
         return;
     }
     
-    const transformedValues = {
-        ...values,
-        users: values.users.map(u => u.value).join(','),
-    };
-
-    if (values.users.length === 0 && user?.email) {
-        transformedValues.users = user.email;
-    }
-
-
     startTransition(async () => {
       const result = isEditMode
-        ? await updateApp(application.id, transformedValues, userProfile)
-        : await createApp(transformedValues, user.uid, user.email!);
+        ? await updateApp(application.id, values, userProfile)
+        : await createApp(values, user.uid, user.email!);
         
       if (result.error) {
         toast({
@@ -117,10 +114,10 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
   const handleAddUser = () => {
     const emailValidation = z.string().email().safeParse(newUserEmail);
     if (emailValidation.success) {
-        if (fields.some(field => field.value === newUserEmail)) {
+        if (fields.some(field => field.email === newUserEmail)) {
             toast({ title: "User already exists", description: "This email is already in the list.", variant: "destructive" });
         } else {
-            append({ value: newUserEmail });
+            append({ email: newUserEmail, role: Role.USER });
             setNewUserEmail("");
         }
     } else {
@@ -129,8 +126,8 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
   }
 
   const handleRemoveUser = (index: number) => {
-    const userToRemove = fields[index].value;
-    if (userToRemove === user?.email) {
+    const userToRemove = fields[index];
+    if (userToRemove.email === user?.email) {
       toast({
         title: "Action Not Allowed",
         description: "You cannot remove yourself from the application.",
@@ -138,12 +135,21 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
       });
       return;
     }
+     if (userToRemove.role === Role.SUPERADMIN && userProfile?.roles?.[application!.id] !== Role.SUPERADMIN) {
+        toast({
+            title: "Action Not Allowed",
+            description: "Admins cannot remove Super Admins.",
+            variant: "destructive",
+        });
+        return;
+    }
     remove(index);
   }
 
-  const canEditAppName = userProfile?.role === Role.SUPERADMIN;
-  const canEditUsers = userProfile?.role === Role.SUPERADMIN || userProfile?.role === Role.ADMIN;
-
+  const currentUserRole = userProfile?.roles?.[application?.id ?? ''];
+  const canEditAppName = currentUserRole === Role.SUPERADMIN;
+  const canEditUsers = currentUserRole === Role.SUPERADMIN || currentUserRole === Role.ADMIN;
+  
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 flex flex-col flex-1">
@@ -186,21 +192,44 @@ export function CreateAppForm({ application }: CreateAppFormProps) {
             name="users"
             render={() => (
                 <FormItem className="mt-8">
-                    <FormLabel>Users</FormLabel>
+                    <FormLabel>Users & Roles</FormLabel>
                     <FormDescription>
-                        These users can access and manage this application's releases.
+                        Manage who can access this application and what permissions they have.
                     </FormDescription>
                     <Card>
                         <CardContent className="pt-6">
                             <div className="space-y-4">
-                                {fields.map((field, index) => (
-                                    <div key={field.id} className="flex items-center justify-between">
-                                        <span>{field.value}</span>
-                                        <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveUser(index)} disabled={isPending || !canEditUsers}>
-                                            <Trash className="h-4 w-4 text-destructive" />
-                                        </Button>
-                                    </div>
-                                ))}
+                                {fields.map((field, index) => {
+                                    const isSuperAdmin = field.role === Role.SUPERADMIN;
+                                    const canCurrentUserEdit = currentUserRole === Role.SUPERADMIN || !isSuperAdmin;
+
+                                    return (
+                                        <div key={field.id} className="flex items-center justify-between gap-4">
+                                            <span className="flex-1 truncate">{field.email}{isSuperAdmin && " (Owner)"}</span>
+                                            <div className="flex items-center gap-2">
+                                                <Select
+                                                    value={field.role}
+                                                    onValueChange={(newRole) => update(index, { ...field, role: newRole as Role })}
+                                                    disabled={isPending || !canCurrentUserEdit || isSuperAdmin}
+                                                >
+                                                    <SelectTrigger className="w-[120px]">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value={Role.ADMIN}>Admin</SelectItem>
+                                                        <SelectItem value={Role.USER}>User</SelectItem>
+                                                        {isSuperAdmin && <SelectItem value={Role.SUPERADMIN}>Super Admin</SelectItem>}
+                                                    </SelectContent>
+                                                </Select>
+                                                {!isSuperAdmin && (
+                                                    <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveUser(index)} disabled={isPending || !canEditUsers}>
+                                                        <Trash className="h-4 w-4 text-destructive" />
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )
+                                })}
                                 {fields.length === 0 && (
                                     <p className="text-sm text-muted-foreground text-center">No users have been added yet.</p>
                                 )}
