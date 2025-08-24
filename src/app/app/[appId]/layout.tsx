@@ -64,7 +64,7 @@ export default function AppLayout({
   }, [appId]);
 
   const userRoleForApp = userProfile?.roles?.[appId];
-  const canEdit = userRoleForApp === Role.SUPERADMIN || userRoleForApp === Role.ADMIN;
+  const canEdit = userProfile?.isSuperAdmin || userRoleForApp === Role.ADMIN;
 
   return (
     <SidebarProvider className="min-h-screen">
