@@ -87,33 +87,12 @@ function AppDashboardPage() {
 
        {loading ? (
         <div className="space-y-4">
-            <Skeleton className="h-40 w-full" />
             <Skeleton className="h-96 w-full" />
         </div>
       ) : error ? (
         <p className="text-destructive text-center">{error}</p>
       ) : app ? (
         <div className="grid gap-6">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Application Details</CardTitle>
-                    <CardDescription>
-                        Information about your selected application.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <p>
-                        <strong>Name:</strong> {app.name}
-                    </p>
-                    <p>
-                        <strong>Package Name:</strong> {app.packageName}
-                    </p>
-                    <p className="text-sm text-muted-foreground mt-4">
-                        Created: {new Date(app.createdAt).toLocaleDateString()}
-                    </p>
-                </CardContent>
-            </Card>
-
             <Card>
                 <CardHeader>
                     <CardTitle>Driver Distribution by Release</CardTitle>
