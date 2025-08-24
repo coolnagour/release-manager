@@ -13,8 +13,10 @@ export interface DataService {
   getAppsForUser(userId: string): Promise<Application[]>;
   updateApp(id: string, updates: Partial<Omit<Application, "id" | "ownerId" | "createdAt">>): Promise<Application>;
   deleteApp(id: string): Promise<void>;
-  findOrCreateUser(user: Pick<UserProfile, "uid" | "email" | "displayName" | "photoURL">): Promise<UserProfile | null>;
+  
+  findOrCreateUser(userData: Pick<UserProfile, "uid" | "email" | "displayName" | "photoURL">): Promise<UserProfile | null>;
   getUser(uid: string): Promise<Omit<UserProfile, 'roles'> | null>;
+  createUser(userData: { email: string; isSuperAdmin: boolean }): Promise<UserProfile>;
 
   createRelease(appId: string, releaseData: Omit<Release, "id" | "createdAt" | "applicationId">): Promise<Release>;
   getRelease(appId: string, releaseId: string): Promise<Release | null>;
@@ -59,5 +61,3 @@ function initializeDb(): DataService {
 }
 
 export const db: DataService = initializeDb();
-
-    

@@ -168,13 +168,41 @@ export class TursoDataService implements DataService {
     };
   }
 
+  async createUser(userData: { email: string; isSuperAdmin: boolean; }): Promise<UserProfile> {
+      const existingUser = await this.db.query.users.findFirst({
+          where: eq(schema.users.email, userData.email),
+      });
+
+      if (existingUser) {
+          throw new Error("A user with this email already exists.");
+      }
+
+      const newUser: schema.User = {
+          uid: randomUUID(),
+          email: userData.email,
+          displayName: null,
+          photoUrl: null,
+          isSuperAdmin: userData.isSuperAdmin,
+          createdAt: new Date(),
+      };
+      
+      await this.db.insert(schema.users).values(newUser);
+
+      return {
+          ...newUser,
+          displayName: newUser.displayName,
+          photoURL: newUser.photoUrl,
+          roles: {}, // No app roles initially
+      };
+  }
+
   async findOrCreateUser(userData: Pick<UserProfile, "uid" | "email" | "displayName" | "photoURL">): Promise<UserProfile | null> {
     if (!userData.email) {
       throw new Error("User email cannot be null.");
     }
     
     let existingUser = await this.db.query.users.findFirst({
-        where: eq(schema.users.uid, userData.uid),
+        where: eq(schema.users.email, userData.email),
     });
 
     if (!existingUser) {
@@ -189,22 +217,20 @@ export class TursoDataService implements DataService {
             isSuperAdmin: isFirstUser,
             createdAt: new Date(),
         };
-
-        await this.db.insert(schema.users).values(newUser).onConflictDoUpdate({
-            target: schema.users.uid,
-            set: { displayName: newUser.displayName, photoUrl: newUser.photoUrl }
-        });
+        await this.db.insert(schema.users).values(newUser);
         existingUser = newUser;
         
     } else {
-        // If user exists, update their profile info
+        // If user exists, update their profile info, including linking their Firebase UID
         await this.db.update(schema.users).set({
+            uid: userData.uid,
             displayName: userData.displayName,
             photoUrl: userData.photoURL,
-        }).where(eq(schema.users.uid, userData.uid));
+        }).where(eq(schema.users.email, userData.email));
 
         existingUser = {
             ...existingUser,
+            uid: userData.uid, // Update uid in the local object
             displayName: userData.displayName,
             photoUrl: userData.photoURL,
         }
