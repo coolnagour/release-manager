@@ -1,72 +1,97 @@
-### Test Release Check API - POST Method
-# turso: 9d03314d-ab63-4493-8faa-a648ad65ebc9
-POST http://localhost:9002/api/releases/check
+
+@hostname = http://localhost:9002
+# You might need to change this appId to match an application in your database.
+# Find it in your Turso dashboard in the 'applications' table or create a new one.
+@appId = 9d03314d-ab63-4493-8faa-a648ad65ebc9
+
+###
+# SUCCESSFUL: Driver 1 on version 1.0.0
+POST {{hostname}}/api/releases/check
 Content-Type: application/json
 
 {
-  "appId": "309c808a-cb33-4326-8574-c371deabea92",
+  "appId": "{{appId}}",
   "country": "IE",
-  "company": 1100,
-  "driver": "9999",
-  "vehicle": "9999",
+  "companyId": 101,
+  "driverId": 1,
+  "vehicleId": 1,
+  "companyRef": "comp-a",
+  "driverRef": "driver-1",
+  "vehicleRef": "vehicle-1",
   "versionName": "1.0.0",
   "versionCode": 100
 }
 
-### Test Release Check API - GET Method
-GET http://localhost:9002/api/releases/check?appId=309c808a-cb33-4326-8574-c371deabea92&country=IE&company=1100&driver=9999&vehicle=9999&versionName=1.0.0&versionCode=100
-
-### Test with Same Version Code (Should not require update)
-POST http://localhost:9002/api/releases/check
+###
+# SUCCESSFUL: Driver 2 on version 1.0.0
+POST {{hostname}}/api/releases/check
 Content-Type: application/json
 
 {
-  "appId": "309c808a-cb33-4326-8574-c371deabea92",
-  "country": "IE",
-  "company": 1100,
-  "driver": "9999",
-  "vehicle": "9999",
-  "versionName": "6.0.10",
-  "versionCode": 14128
-}
-
-### Test with Higher Version Code (Should not require update)
-POST http://localhost:9002/api/releases/check
-Content-Type: application/json
-
-{
-  "appId": "309c808a-cb33-4326-8574-c371deabea92",
-  "country": "IE",
-  "company": 1100,
-  "driver": "9999",
-  "vehicle": "9999",
-  "versionName": "2.0.0",
-  "versionCode": 9999
-}
-
-### Test with Invalid UUID (Should return validation error)
-POST http://localhost:9002/api/releases/check
-Content-Type: application/json
-
-{
-  "appId": "invalid-uuid",
-  "country": "IE",
-  "company": 1100,
-  "driver": "9999",
-  "vehicle": "9999",
+  "appId": "{{appId}}",
+  "country": "US",
+  "companyId": 102,
+  "driverId": 2,
+  "vehicleId": 2,
   "versionName": "1.0.0",
   "versionCode": 100
 }
 
-### Test with Missing Required Field (Should return validation error)
-POST http://localhost:9002/api/releases/check
+###
+# SUCCESSFUL: Driver 3 on version 1.1.0
+POST {{hostname}}/api/releases/check
 Content-Type: application/json
 
 {
-  "appId": "309c808a-cb33-4326-8574-c371deabea92",
+  "appId": "{{appId}}",
+  "country": "DE",
+  "companyId": 101,
+  "driverId": 3,
+  "vehicleId": 3,
+  "versionName": "1.1.0",
+  "versionCode": 110
+}
+
+###
+# SUCCESSFUL: Driver 4 on version 1.1.0
+POST {{hostname}}/api/releases/check
+Content-Type: application/json
+
+{
+  "appId": "{{appId}}",
   "country": "IE",
-  "company": 1100,
-  "driver": "9999",
-  "versionName": "1.0.0",
-  "versionCode": 100
+  "companyId": 103,
+  "driverId": 4,
+  "vehicleId": 4,
+  "versionName": "1.1.0",
+  "versionCode": 110
+}
+
+###
+# SUCCESSFUL: Driver 5 on version 1.2.0 (latest)
+POST {{hostname}}/api/releases/check
+Content-Type: application/json
+
+{
+  "appId": "{{appId}}",
+  "country": "IE",
+  "companyId": 101,
+  "driverId": 5,
+  "vehicleId": 5,
+  "versionName": "1.2.0",
+  "versionCode": 120
+}
+
+###
+# GET request example
+GET {{hostname}}/api/releases/check?appId={{appId}}&country=IE&companyId=1100&driverId=9999&vehicleId=9999&companyRef=comp-abc&driverRef=driver-xyz&vehicleRef=vehicle-123&versionName=1.2.0&versionCode=120
+
+###
+# VALIDATION ERROR: Missing required fields
+POST {{hostname}}/api/releases/check
+Content-Type: application/json
+
+{
+  "appId": "{{appId}}",
+  "country": "IE"
 }
